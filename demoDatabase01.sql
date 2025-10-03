@@ -1,4 +1,16 @@
-﻿------------------------------------------------------
+IF DB_ID('demoDB4SWP') IS NOT NULL
+BEGIN
+    ALTER DATABASE demoDB4SWP SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE demoDB4SWP;
+END
+GO
+
+CREATE DATABASE demoDB4SWP;
+GO
+
+USE demoDB4SWP;
+GO
+------------------------------------------------------
 -- USERS (Customer / Staff / Admin)
 ------------------------------------------------------
 CREATE TABLE Users (
