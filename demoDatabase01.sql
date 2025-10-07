@@ -1,4 +1,20 @@
-﻿------------------------------------------------------
+------------------------------------------------------
+-- RESET DATABASE
+------------------------------------------------------
+IF DB_ID('EV_Rental') IS NOT NULL
+BEGIN
+    ALTER DATABASE EV_Rental SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE EV_Rental;
+END
+GO
+
+CREATE DATABASE EV_Rental;
+GO
+
+USE EV_Rental;
+GO
+
+------------------------------------------------------
 -- USERS (Customer / Staff / Admin)
 ------------------------------------------------------
 CREATE TABLE Users (
@@ -173,3 +189,4 @@ CREATE TABLE AuditLog (
     Timestamp DATETIME DEFAULT GETDATE(),
     CONSTRAINT FK_AuditLog_User FOREIGN KEY (UserID) REFERENCES Users(UserID)
 );
+GO
