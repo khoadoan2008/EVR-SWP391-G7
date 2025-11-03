@@ -1,12 +1,15 @@
 package com.group7.evr.entity;
 
+import com.group7.evr.enums.ReportType;
 import jakarta.persistence.*;
+import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "VehicleConditionReport")
+@Data
 public class VehicleConditionReport {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,6 +26,9 @@ public class VehicleConditionReport {
     private LocalDateTime reportTime = LocalDateTime.now();
     private BigDecimal battery;
     private String damageDescription;
-    private String photos;
-    private String reportType; // 'PreRental', 'PostRental'
+    private String photos; // JSON array of photo URLs
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "ReportType")
+    private ReportType reportType;
 }

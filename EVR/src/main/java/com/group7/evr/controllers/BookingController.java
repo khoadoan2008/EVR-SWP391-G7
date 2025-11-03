@@ -29,6 +29,12 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.createBooking(booking, user));
     }
 
+    // Get booking details
+    @GetMapping("/bookings/{id}")
+    public ResponseEntity<Booking> getBookingById(@PathVariable Integer id) {
+        return ResponseEntity.ok(bookingService.getBookingById(id));
+    }
+
     // 3a. Check-in
     @PutMapping("/bookings/{id}/checkin")
     public ResponseEntity<Booking> checkIn(
@@ -57,9 +63,65 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.getUserHistory(userId));
     }
 
+    // Enhanced user booking history with pagination and filtering
+    @GetMapping("/bookings/user/{userId}")
+    public ResponseEntity<Map<String, Object>> getUserBookings(
+            @PathVariable Integer userId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String fromDate,
+            @RequestParam(required = false) String toDate,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(bookingService.getUserBookingsWithFilters(userId, status, fromDate, toDate, page, size));
+    }
+
     // 5b. Analytics
     @GetMapping("/analytics/user")
     public ResponseEntity<Map<String, Object>> getAnalytics(@RequestParam Integer userId) {
         return ResponseEntity.ok(bookingService.getUserAnalytics(userId));
+    }
+
+    // Advanced analytics
+    @GetMapping("/analytics/user/advanced")
+    public ResponseEntity<Map<String, Object>> getAdvancedAnalytics(@RequestParam Integer userId) {
+        return ResponseEntity.ok(bookingService.getAdvancedUserAnalytics(userId));
+    }
+
+    // New: modify booking
+    @PutMapping("/bookings/{id}")
+    public ResponseEntity<Booking> modifyBooking(
+            @PathVariable Integer id,
+            @RequestParam Integer userId,
+            @RequestBody Booking updates) {
+        User actor = userService.getUserById(userId);
+        return ResponseEntity.ok(bookingService.modifyBooking(id, updates, actor));
+    }
+
+    // New: cancel booking
+    @DeleteMapping("/bookings/{id}")
+    public ResponseEntity<Booking> cancelBooking(
+            @PathVariable Integer id,
+            @RequestParam Integer userId) {
+        User actor = userService.getUserById(userId);
+        return ResponseEntity.ok(bookingService.cancelBooking(id, actor));
+    }
+
+    // New: settlement
+    @PostMapping("/bookings/{id}/settlement")
+    public ResponseEntity<Map<String, Object>> settle(
+            @PathVariable Integer id,
+            @RequestParam Integer userId) {
+        User actor = userService.getUserById(userId);
+        return ResponseEntity.ok(bookingService.settleBooking(id, actor));
+    }
+
+    // Placeholder: return inspection upload (extend later with multipart)
+    @PostMapping("/bookings/{id}/return-inspection")
+    public ResponseEntity<String> uploadReturnInspection(
+            @PathVariable Integer id,
+            @RequestParam Integer userId) {
+        User actor = userService.getUserById(userId);
+        // TODO: implement with file uploads & checklist
+        return ResponseEntity.ok("Return inspection received for booking " + id);
     }
 }

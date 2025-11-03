@@ -1,5 +1,6 @@
 package com.group7.evr.entity;
 
+import com.group7.evr.enums.DepositStatus;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -17,6 +18,9 @@ public class Deposit {
     @JoinColumn(name = "BookingID")
     private Booking booking;
     private BigDecimal amount;
-    private String status = "Held";
+    
+    @Enumerated(EnumType.STRING)
+    private DepositStatus status = DepositStatus.HELD;
+    
     private LocalDateTime createdAt = LocalDateTime.now();
 }

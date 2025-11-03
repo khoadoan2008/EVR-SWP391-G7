@@ -1,5 +1,6 @@
 package com.group7.evr.entity;
 
+import com.group7.evr.enums.FeedbackCategory;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -18,7 +19,10 @@ public class Feedback {
     @ManyToOne
     @JoinColumn(name = "UserID")
     private User user;
-    private String category;
+    
+    @Enumerated(EnumType.STRING)
+    private FeedbackCategory category;
+    
     private Integer stars;
     private String comment;
     private LocalDateTime createdAt = LocalDateTime.now();

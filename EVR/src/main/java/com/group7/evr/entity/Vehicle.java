@@ -1,5 +1,6 @@
 package com.group7.evr.entity;
 
+import com.group7.evr.enums.VehicleStatus;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -22,7 +23,10 @@ public class Vehicle {
     private String plateNumber;
     private BigDecimal batteryLevel;
     private BigDecimal mileage;
-    private String status = "Available";
+    
+    @Enumerated(EnumType.STRING)
+    private VehicleStatus status = VehicleStatus.AVAILABLE;
+    
     private Date lastMaintenanceDate;
 }
 

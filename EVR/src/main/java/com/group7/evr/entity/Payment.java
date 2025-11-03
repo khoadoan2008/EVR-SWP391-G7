@@ -1,5 +1,7 @@
 package com.group7.evr.entity;
 
+import com.group7.evr.enums.PaymentMethod;
+import com.group7.evr.enums.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -16,9 +18,14 @@ public class Payment {
     @ManyToOne
     @JoinColumn(name = "BookingID")
     private Booking booking;
-    private String method;
+    
+    @Enumerated(EnumType.STRING)
+    private PaymentMethod method;
+    
     private BigDecimal amount;
     private LocalDateTime paymentDate = LocalDateTime.now();
-    private String status;
+    
+    @Enumerated(EnumType.STRING)
+    private PaymentStatus status;
 
 }

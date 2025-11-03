@@ -1,5 +1,6 @@
 package com.group7.evr.entity;
 
+import com.group7.evr.enums.ComplaintStatus;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -23,5 +24,7 @@ public class Complaint {
     private User staff;
     private String issueDescription;
     private LocalDateTime createdAt = LocalDateTime.now();
-    private String status = "Pending";
+    
+    @Enumerated(EnumType.STRING)
+    private ComplaintStatus status = ComplaintStatus.PENDING;
 }

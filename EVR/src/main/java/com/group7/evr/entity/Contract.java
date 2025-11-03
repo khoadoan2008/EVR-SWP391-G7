@@ -1,5 +1,6 @@
 package com.group7.evr.entity;
 
+import com.group7.evr.enums.ContractStatus;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -18,5 +19,7 @@ public class Contract {
     private String renterSignature;
     private String staffSignature;
     private LocalDateTime signedAt = LocalDateTime.now();
-    private String status = "Active";
+    
+    @Enumerated(EnumType.STRING)
+    private ContractStatus status = ContractStatus.ACTIVE;
 }

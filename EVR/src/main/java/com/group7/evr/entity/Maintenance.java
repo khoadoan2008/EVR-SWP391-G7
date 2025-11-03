@@ -1,36 +1,38 @@
 package com.group7.evr.entity;
 
-import com.group7.evr.enums.BookingStatus;
+import com.group7.evr.enums.MaintenanceStatus;
 import jakarta.persistence.*;
 import lombok.Data;
 
-import java.math.BigDecimal;
-import java.sql.Date;
+import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "Booking")
+@Table(name = "Maintenance")
 @Data
-public class Booking {
+public class Maintenance {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer bookingId;
-    @ManyToOne
-    @JoinColumn(name = "UserID")
-    private User user;
+    private Integer maintenanceId;
+
     @ManyToOne
     @JoinColumn(name = "VehicleID")
     private Vehicle vehicle;
+
     @ManyToOne
     @JoinColumn(name = "StationID")
     private Station station;
+
     @ManyToOne
     @JoinColumn(name = "StaffID")
     private User staff;
-    private Date startTime;
-    private Date endTime;
-    private BigDecimal totalPrice;
+
+    private String issueDescription;
     
     @Enumerated(EnumType.STRING)
-    @Column(name = "BookingStatus")
-    private BookingStatus bookingStatus = BookingStatus.PENDING;
+    private MaintenanceStatus status;
+
+    private LocalDateTime scheduledAt;
+    private LocalDateTime closedAt;
+
+    private String remarks;
 }
