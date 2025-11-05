@@ -1,0 +1,9 @@
+Google Sheets: https://docs.google.com/spreadsheets/d/1c96zp2becKBBS_yKSbVP--HDqwugh8nXkjygW3Aq2Qc/edit?usp=sharing
+Git: https://github.com/khoadoan2008/EVR-SWP391-G7/
+Google drive: https://drive.google.com/drive/folders/1QSDgL1J9cojg_xKi1cCtGSFYOgQwz4vM?usp=sharing
+
+Notes:
+
+- Google Sheets link for project requirement overview + information
+- Git contains ALL resources of the project
+- Google Drive for other documentations.
