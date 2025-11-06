@@ -1,6 +1,7 @@
 package com.group7.evr.controllers;
 
 import com.group7.evr.entity.Vehicle;
+import com.group7.evr.enums.VehicleStatus;
 import com.group7.evr.service.VehicleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -22,7 +23,7 @@ public class VehicleController {
 
     @GetMapping("/vehicles/available")
     public ResponseEntity<List<Vehicle>> getAvailableVehicles(@RequestParam Integer stationId) {
-        return ResponseEntity.ok(vehicleRepository.findByStationStationIdAndStatus(stationId, "Available"));
+        return ResponseEntity.ok(vehicleRepository.findByStationStationIdAndStatus(stationId, VehicleStatus.AVAILABLE));
     }
 
     @GetMapping("/vehicles/{id}")

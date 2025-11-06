@@ -1,6 +1,7 @@
 package com.group7.evr.service;
 
 import com.group7.evr.entity.*;
+import com.group7.evr.enums.VehicleStatus;
 import com.group7.evr.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -34,9 +35,9 @@ public class AdminService {
 
     // Fleet monitoring by station
     public Map<String, Object> getFleetSummary(Integer stationId) {
-        List<Vehicle> vehicles = vehicleRepository.findByStationStationIdAndStatus(stationId, "Available");
-        List<Vehicle> rentedVehicles = vehicleRepository.findByStationStationIdAndStatus(stationId, "Rented");
-        List<Vehicle> maintenanceVehicles = vehicleRepository.findByStationStationIdAndStatus(stationId, "Maintenance");
+        List<Vehicle> vehicles = vehicleRepository.findByStationStationIdAndStatus(stationId, VehicleStatus.AVAILABLE);
+        List<Vehicle> rentedVehicles = vehicleRepository.findByStationStationIdAndStatus(stationId, VehicleStatus.RENTED);
+        List<Vehicle> maintenanceVehicles = vehicleRepository.findByStationStationIdAndStatus(stationId, VehicleStatus.MAINTENANCE);
         
         Map<String, Object> summary = new HashMap<>();
         summary.put("totalVehicles", vehicles.size() + rentedVehicles.size() + maintenanceVehicles.size());
@@ -145,8 +146,8 @@ public class AdminService {
     }
 
     public Map<String, Object> getUtilizationReport(Integer stationId) {
-        List<Vehicle> vehicles = vehicleRepository.findByStationStationIdAndStatus(stationId, "Available");
-        List<Vehicle> rentedVehicles = vehicleRepository.findByStationStationIdAndStatus(stationId, "Rented");
+        List<Vehicle> vehicles = vehicleRepository.findByStationStationIdAndStatus(stationId, VehicleStatus.AVAILABLE);
+        List<Vehicle> rentedVehicles = vehicleRepository.findByStationStationIdAndStatus(stationId, VehicleStatus.RENTED);
         
         Map<String, Object> utilization = new HashMap<>();
         utilization.put("totalVehicles", vehicles.size() + rentedVehicles.size());

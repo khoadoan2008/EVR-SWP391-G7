@@ -55,7 +55,9 @@ public class StationStaffService {
                     .distinct()
                     .toList();
         }
-        return vehicleRepository.findByStationStationIdAndStatus(stationId, status);
+        // Map string to enum for repository
+        VehicleStatus enumStatus = VehicleStatus.valueOf(status.toUpperCase());
+        return vehicleRepository.findByStationStationIdAndStatus(stationId, enumStatus);
     }
 
     // a. Create handover report (pre/post rental)
