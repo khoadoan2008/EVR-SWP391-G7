@@ -245,4 +245,5 @@ public class BookingService {
         // Mock calculation - would check battery usage
         return BigDecimal.ZERO;
     }
+    
 }
