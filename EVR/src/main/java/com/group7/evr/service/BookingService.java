@@ -25,6 +25,7 @@ public class BookingService {
     private VehicleRepository vehicleRepository;
     @Autowired
     private UserService userService;
+
     public Booking createBooking(Booking booking, User user) {
         Vehicle vehicle = vehicleRepository.findById(booking.getVehicle().getVehicleId()).orElseThrow();
         
@@ -97,6 +98,7 @@ public class BookingService {
                            newBooking.getEndTime().after(booking.getStartTime()));
                 });
     }
+
     public Booking checkIn(Integer bookingId, User user, User staff) {
         Booking booking = bookingRepository.findById(bookingId).orElseThrow();
         booking.setBookingStatus(BookingStatus.CONFIRMED);
