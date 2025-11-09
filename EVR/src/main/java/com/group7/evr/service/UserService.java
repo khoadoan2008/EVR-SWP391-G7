@@ -63,9 +63,10 @@ public class UserService {
         log.setTimestamp(LocalDateTime.now());
         auditLogRepository.save(log);
     }
-public User getUserById(Integer userId) {
-        return userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
-}
+
+    public User getUserById(Integer userId) {
+            return userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+    }
 
     // --- New: Login functionality ---
     public Map<String, Object> login(String email, String password) {

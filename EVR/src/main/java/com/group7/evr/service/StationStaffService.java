@@ -38,6 +38,7 @@ public class StationStaffService {
     @Autowired
     private MaintenanceRepository maintenanceRepository;
     private final String uploadDir = "uploads/reports/"; // Configure properly (e.g., use S3 in production)
+
     // a. View vehicles by status (available, rented, booked)
     public List<Vehicle> getVehiclesByStatus(Integer staffId, String status) {
         User staff = userRepository.findById(staffId)
