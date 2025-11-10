@@ -27,6 +27,12 @@ public class UserService {
     private AuditLogRepository auditLogRepository;
     private final String uploadDir = "uploads/";
 
+    /**
+     * REGISTER NEW CUSTOMER
+     * - Creates customer account with CUSTOMER role
+     * - Uploads ID card and driver license images
+     * - Logs registration audit trail
+     */
     public User register(User user, MultipartFile personalIdImage, MultipartFile licenseImage) throws IOException {
         user.setRole(UserRole.CUSTOMER);
         if (personalIdImage != null) {
@@ -42,6 +48,11 @@ public class UserService {
         return savedUser;
     }
 
+    /**
+     * VERIFY USER ACCOUNT (by staff)
+     * - Activates user account by setting status to ACTIVE
+     * - Typically called after document verification by staff
+     */
     public User verifyUser(Integer userId, User staff) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -50,12 +61,22 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    /**
+     * SAVE UPLOADED FILE TO SERVER
+     * - Stores file in uploads/ directory
+     * - Returns the saved file path
+     */
     private String saveFile(MultipartFile file) throws IOException {
         Path path =  Paths.get(uploadDir + file.getOriginalFilename());
         Files.write(path, file.getBytes());
         return path.toString();
     }
 
+    /**
+     * LOG USER ACTION FOR AUDIT TRAIL
+     * - Tracks all important system operations
+     * - Used for security monitoring and troubleshooting
+     */
     public void logAudit(User user, String action) {
         AuditLog log = new AuditLog();
         log.setUser(user);
@@ -63,12 +84,22 @@ public class UserService {
         log.setTimestamp(LocalDateTime.now());
         auditLogRepository.save(log);
     }
-
+    /**
+     * GET USER BY ID
+     * - Retrieves user from database
+     * - Throws exception if user not found
+     */
     public User getUserById(Integer userId) {
-            return userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+        return userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
     }
 
-    // --- New: Login functionality ---
+
+    /**
+     * USER LOGIN AUTHENTICATION
+     * - Validates email and password
+     * - Verifies account is ACTIVE status
+     * - Generates JWT token (mock) and returns sanitized user data
+     */
     public Map<String, Object> login(String email, String password) {
         User user = userRepository.findByEmail(email);
         if (user == null) {
@@ -96,7 +127,11 @@ public class UserService {
         return response;
     }
 
-    // --- New: Update user functionality ---
+    /**
+     * UPDATE USER PROFILE INFORMATION
+     * - Allows updating only safe fields: name, phone, address, email
+     * - Prevents modification of role, status, password
+     */
     public User updateUser(Integer userId, User userUpdates) {
         User existingUser = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -120,7 +155,11 @@ public class UserService {
         return updatedUser;
     }
 
-    // --- Helper: Sanitize user data for API responses ---
+    /**
+     * SANITIZE USER DATA FOR API RESPONSES
+     * - Removes sensitive information: password, documents
+     * - Returns only necessary fields for client
+     */
     private User sanitizeUserData(User user) {
         User sanitized = new User();
         sanitized.setUserId(user.getUserId());
@@ -135,7 +174,12 @@ public class UserService {
         return sanitized;
     }
 
-    // --- Admin: Customer management ---
+    /**
+     * GET ALL USERS WITH FILTERING AND PAGINATION (Admin function)
+     * - Supports filtering by role and status
+     * - Implements pagination for large datasets
+     * - Returns metadata: totalCount, totalPages
+     */
     public Map<String, Object> getAllUsers(int page, int size, String role, String status) {
         List<User> allUsers = userRepository.findAll();
         
@@ -160,6 +204,11 @@ public class UserService {
         return response;
     }
 
+    /**
+     * GET CUSTOMERS WITH RISK INDICATORS
+     * - Currently: returns customers with status != ACTIVE
+     * - Future: can integrate with risk flag system
+     */
     public List<User> getRiskUsers() {
         return userRepository.findAll().stream()
                 .filter(user -> UserRole.CUSTOMER.equals(user.getRole()))
@@ -171,15 +220,20 @@ public class UserService {
                 .toList();
     }
 
+    /**
+     * UPDATE USER STATUS (Admin function)
+     * - Allowed statuses: Active, Suspended, Banned
+     * - Logs audit trail with reason for status change
+     */
     public User updateUserStatus(Integer userId, String status, String reason) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         
         // Validate status
         if (!isValidStatus(status)) {
-            throw new RuntimeException("Invalid status. Must be: Active, Suspended, Banned");
+            throw new RuntimeException("Invalid status. Must be: Active, Suspended, Deleted");
         }
-        
+
         String oldStatus = user.getStatus().toString();
         user.setStatus(UserStatus.valueOf(status.toUpperCase()));
         User updatedUser = userRepository.save(user);
@@ -190,11 +244,22 @@ public class UserService {
         return updatedUser;
     }
 
+    /**
+     * VALIDATE USER STATUS STRING
+     *
+     */
     private boolean isValidStatus(String status) {
-        return status != null && (status.equals("Active") || status.equals("Suspended") || status.equals("Banned"));
+        // K có status BANNED trong enum
+//        return status != null && (status.equals("Active") || status.equals("Suspended") || status.equals("Banned"));
+        return status != null && (status.equals("Active") || status.equals("Suspended") || status.equals("Deleted"));
     }
 
-    // --- Admin: Staff management ---
+    /**
+     * CREATE NEW STAFF ACCOUNT (Admin function)
+     * - Sets default role: STAFF
+     * - Requires station assignment
+     * - Generates default password if not provided
+     */
     public User createStaff(User staff) {
         // Validate required fields
         if (staff.getName() == null || staff.getName().trim().isEmpty()) {
@@ -220,6 +285,11 @@ public class UserService {
         return savedStaff;
     }
 
+    /**
+     * GET STAFF LIST
+     * - Can filter by stationId
+     * - If stationId = null → returns all staff
+     */
     public List<User> getStaff(Integer stationId) {
         List<User> allUsers = userRepository.findAll();
         
@@ -229,6 +299,11 @@ public class UserService {
                 .toList();
     }
 
+    /**
+     * UPDATE STAFF INFORMATION
+     * - Allows updating permitted fields only
+     * - Validates: user must have STAFF role
+     */
     public User updateStaff(Integer staffId, User staffUpdates) {
         User existingStaff = userRepository.findById(staffId)
                 .orElseThrow(() -> new RuntimeException("Staff not found"));
@@ -259,6 +334,12 @@ public class UserService {
         return updatedStaff;
     }
 
+    /**
+     * DELETE STAFF ACCOUNT (Soft delete)
+     * - Sets status to DELETED instead of database removal
+     * - Validates: user must have STAFF role
+     * - Future: should check for active bookings before deletion
+     */
     public Map<String, Object> deleteStaff(Integer staffId) {
         User staff = userRepository.findById(staffId)
                 .orElseThrow(() -> new RuntimeException("Staff not found"));

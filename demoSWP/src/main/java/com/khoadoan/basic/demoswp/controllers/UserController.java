@@ -1,11 +1,11 @@
-package com.group7.evr.controllers;
+package com.khoadoan.basic.demoswp.controllers;
 
-import com.group7.evr.entity.User;
-import com.group7.evr.service.UserService;
+import com.khoadoan.basic.demoswp.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import com.khoadoan.basic.demoswp.service.UserService;
 
 import java.util.List;
 import java.util.Map;
@@ -18,8 +18,8 @@ public class UserController {
 
     @PostMapping("/users/register")
     public ResponseEntity<User> register(@ModelAttribute User user,
-                                         @RequestParam(value = "personalIdImage", required = false) MultipartFile personalIdImage,
-                                         @RequestParam(value = "licenseImage", required = false) MultipartFile licenseImage) throws Exception {
+                                         @RequestPart(value = "personalIdImage", required = false) MultipartFile personalIdImage,
+                                         @RequestPart(value = "licenseImage", required = false) MultipartFile licenseImage) throws Exception {
         return ResponseEntity.ok(userService.register(user, personalIdImage, licenseImage));
     }
 
