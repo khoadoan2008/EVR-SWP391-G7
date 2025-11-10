@@ -68,7 +68,7 @@ public class BookingService {
         List<Booking> filteredBookings = allBookings.stream()
                 .filter(booking -> status == null || booking.getBookingStatus().toString().equals(status))
                 .filter(booking -> fromDate == null || booking.getStartTime().toString().compareTo(fromDate) >= 0)
-                .filter(booking -> toDate == null || booking.getStartTime().toString().compareTo(toDate) <= 0)
+                .filter(booking -> toDate == null || booking.getEndTime().toString().compareTo(toDate) <= 0)
                 .toList();
         
         // Apply pagination
