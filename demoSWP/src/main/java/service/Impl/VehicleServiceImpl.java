@@ -1,8 +1,8 @@
-package service;
+package service.Impl;
 
-import com.group7.evr.entity.*;
-import com.group7.evr.enums.*;
-import com.group7.evr.repository.*;
+import entity.*;
+import repository.*;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -15,7 +15,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Service
-public class VehicleService {
+public class VehicleServiceImpl {
     @Autowired
     private VehicleRepository vehicleRepository;
     @Autowired
@@ -25,7 +25,7 @@ public class VehicleService {
     @Autowired
     private IssueReportRepository issueReportRepository;
     @Autowired
-    private UserService userService;
+    private UserServiceImpl userService;
     
     private final String uploadDir = "uploads/issues/";
 

@@ -2,6 +2,7 @@ package entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import jakarta.validation.constraints.Pattern;
 
 import java.time.LocalDateTime;
 
@@ -23,5 +24,8 @@ public class Complaint {
     private User staff;
     private String issueDescription;
     private LocalDateTime createdAt = LocalDateTime.now();
+    @Column(name = "Status")
+    @Pattern(regexp = "Pending|Resolved|Rejected",
+            message = "Status must be: Pending, Resolved, or Rejected")
     private String status = "Pending";
 }

@@ -1,6 +1,7 @@
 package entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -16,9 +17,14 @@ public class Payment {
     @ManyToOne
     @JoinColumn(name = "BookingID")
     private Booking booking;
+
+    @Pattern(regexp = "Card|E-wallet|Cash", message = "Method must be one of: Card, E-wallet, Cash")
+
     private String method;
     private BigDecimal amount;
     private LocalDateTime paymentDate = LocalDateTime.now();
+
+    @Pattern(regexp = "Pending|Success|Failed|Refunded", message = "Status must be one of: Pending, Success, Failed, Refunded")
     private String status;
 
 }

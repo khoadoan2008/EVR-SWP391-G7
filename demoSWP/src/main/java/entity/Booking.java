@@ -1,6 +1,7 @@
 package entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -28,5 +29,7 @@ public class Booking {
     private Date startTime;
     private Date endTime;
     private BigDecimal totalPrice;
+    @Pattern(regexp = "Pending|Confirmed|Cancelled|Completed",
+            message = "BookingStatus must be: Pending, Confirmed, Cancelled, or Completed")
     private String bookingStatus = "Pending";
 }

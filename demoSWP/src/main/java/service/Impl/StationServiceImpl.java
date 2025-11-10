@@ -1,4 +1,4 @@
-package service;
+package service.Impl;
 
 import com.group7.evr.entity.Station;
 import com.group7.evr.entity.Vehicle;
@@ -12,13 +12,13 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-public class StationService {
+public class StationServiceImpl {
     @Autowired
     private StationRepository stationRepository;
     @Autowired
     private VehicleRepository vehicleRepository;
     @Autowired
-    private UserService userService;
+    private UserServiceImpl userService;
 
     public Station createStation(Station station) {
         // Validate required fields

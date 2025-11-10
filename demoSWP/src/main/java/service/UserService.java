@@ -1,67 +1,32 @@
 package service;
 
-import entity.AuditLog;
 import entity.User;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import repository.AuditLogRepository;
-import repository.UserRepository;
-
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 
-@Service
-public class UserService {
-    @Autowired
-    private UserRepository userRepository;
-    @Autowired
-    private AuditLogRepository auditLogRepository;
-    private final String uploadDir = "uploads/";
+public interface UserService {
+    // 👥 USER REGISTRATION & AUTHENTICATION
+    public User register(User user, MultipartFile personalIdImage, MultipartFile licenseImage) throws IOException;
+    public User verifyUser(Integer userId, User staff);
+    public Map<String, Object> login(String email, String password);
 
-    public User register(User user, MultipartFile personalIdImage, MultipartFile licenseImage) throws IOException {
-        user.setRole("Customer");
-        if (personalIdImage != null) {
-            String fileName = saveFile(personalIdImage);
-            user.setPersonalIdImage(fileName);
-        }
-        if (licenseImage != null) {
-            String fileName = saveFile(licenseImage);
-            user.setLicenseImage(fileName);
-        }
-        User savedUser = userRepository.save(user);
-        logAudit(savedUser, "Registered user " + savedUser.getUserId());
-        return savedUser;
-    }
+    // 🔐 SECURITY & AUDITING
+    public void logAudit(User user, String action);
 
-    public User verifyUser(Integer userId, User staff) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        user.setStatus("Active");
-        logAudit(staff, "Verified user " + userId);
-        return userRepository.save(user);
-    }
+    // 📊 USER MANAGEMENT
+    public User getUserById(Integer userId);
+    public User updateUser(Integer userId, User userUpdates);
+    public Map<String, Object> getAllUsers(int page, int size, String role, String status);
+    public List<User> getRiskUsers();
+    public User updateUserStatus(Integer userId, String status, String reason);
 
-    private String saveFile(MultipartFile file) throws IOException {
-        Path path =  Paths.get(uploadDir + file.getOriginalFilename());
-        Files.write(path, file.getBytes());
-        return path.toString();
-    }
-
-    public void logAudit(User user, String action) {
-        AuditLog log = new AuditLog();
-        log.setUser(user);
-        log.setAction(action);
-        log.setTimestamp(LocalDateTime.now());
-        auditLogRepository.save(log);
-    }
-public User getUserById(Integer userId) {
-        return userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
-}
-
+    // 👮 STAFF MANAGEMENT (Admin functions)
+    public User createStaff(User staff);
+    public List<User> getStaff(Integer stationId);
+    public User updateStaff(Integer staffId, User staffUpdates);
+    public Map<String, Object> deleteStaff(Integer staffId);
 }
 

@@ -1,6 +1,7 @@
 package entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Pattern;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -9,7 +10,7 @@ import java.time.LocalDateTime;
 @Table(name = "VehicleConditionReport")
 public class VehicleConditionReport {
     @Id
-    @GeneratedValue(strategy = jakarta.persistence.GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer reportId;
     @ManyToOne
     @JoinColumn(name = "ContractID")
@@ -23,6 +24,9 @@ public class VehicleConditionReport {
     private LocalDateTime reportTime = LocalDateTime.now();
     private BigDecimal battery;
     private String damageDescription;
-    private String photos;
-    private String reportType; // 'PreRental', 'PostRental'
+    private String photos; // JSON array of photo URLs
+
+    @Column(name = "ReportType")
+    @Pattern(regexp = "PreRental|PostRental", message = "ReportType must be either 'PreRental' or 'PostRental'")
+    private String reportType;
 }

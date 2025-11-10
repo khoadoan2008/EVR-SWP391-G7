@@ -1,6 +1,7 @@
 package entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -22,7 +23,10 @@ public class Vehicle {
     private String plateNumber;
     private BigDecimal batteryLevel;
     private BigDecimal mileage;
+
+    @Pattern(regexp = "Available|Rented|Maintenance", message = "Status must be one of: Available, Rented, Maintenance")
     private String status = "Available";
+
     private Date lastMaintenanceDate;
 }
 

@@ -1,4 +1,4 @@
-package service;
+package service.Impl;
 
 import entity.Booking;
 import entity.User;
@@ -6,7 +6,6 @@ import entity.Vehicle;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import repository.BookingRepository;
-import repository.UserRepository;
 import repository.VehicleRepository;
 
 import java.math.BigDecimal;
@@ -15,13 +14,13 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-public class BookingService {
+public class BookingServiceImpl {
     @Autowired
     private BookingRepository bookingRepository;
     @Autowired
     private VehicleRepository vehicleRepository;
     @Autowired
-    private UserService userService;
+    private UserServiceImpl userService;
     public Booking createBooking(Booking booking, User user) {
         Vehicle vehicle = vehicleRepository.findById(booking.getVehicle().getVehicleId()).orElseThrow();
         if (!"Available".equals(vehicle.getStatus())) {

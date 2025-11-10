@@ -1,6 +1,7 @@
 package entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -18,5 +19,6 @@ public class Contract {
     private String renterSignature;
     private String staffSignature;
     private LocalDateTime signedAt = LocalDateTime.now();
+    @Pattern(regexp = "Active|Completed|Violated", message = "Status must be either 'Active', 'Completed' or 'Violated'")
     private String status = "Active";
 }

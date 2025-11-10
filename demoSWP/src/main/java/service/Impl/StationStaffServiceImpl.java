@@ -1,4 +1,4 @@
-package service;
+package service.Impl;
 
 import com.group7.evr.entity.*;
 import com.group7.evr.enums.*;
@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
-public class StationStaffService {
+public class StationStaffServiceImpl {
     @Autowired
     private VehicleRepository vehicleRepository;
     @Autowired

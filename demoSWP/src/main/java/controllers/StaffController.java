@@ -1,7 +1,8 @@
 package controllers;
 
-import com.group7.evr.entity.User;
-import com.group7.evr.service.UserService;
+import entity.User;
+import service.UserService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

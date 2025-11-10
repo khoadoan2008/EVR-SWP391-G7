@@ -5,8 +5,8 @@ import entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import service.BookingService;
-import service.UserService;
+import service.Impl.BookingServiceImpl;
+import service.Impl.UserServiceImpl;
 
 import java.util.List;
 import java.util.Map;
@@ -15,9 +15,9 @@ import java.util.Map;
 @RequestMapping("/api")
 public class BookingController {
     @Autowired
-    private BookingService bookingService;
+    private BookingServiceImpl bookingService;
     @Autowired
-    private UserService userService;
+    private UserServiceImpl userService;
 
     // 2c. Book vehicle
     @PostMapping("/bookings")

@@ -1,10 +1,9 @@
-package service;
+package service.Impl;
 
-import com.group7.evr.entity.*;
-import com.group7.evr.enums.VehicleStatus;
-import com.group7.evr.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import repository.*;
+import entity.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -13,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-public class AdminService {
+public class AdminServiceImpl {
     @Autowired
     private VehicleRepository vehicleRepository;
     @Autowired
@@ -31,13 +30,13 @@ public class AdminService {
     @Autowired
     private ComplaintRepository complaintRepository;
     @Autowired
-    private UserService userService;
+    private UserServiceImpl userService;
 
     // Fleet monitoring by station
     public Map<String, Object> getFleetSummary(Integer stationId) {
-        List<Vehicle> vehicles = vehicleRepository.findByStationStationIdAndStatus(stationId, VehicleStatus.AVAILABLE);
-        List<Vehicle> rentedVehicles = vehicleRepository.findByStationStationIdAndStatus(stationId, VehicleStatus.RENTED);
-        List<Vehicle> maintenanceVehicles = vehicleRepository.findByStationStationIdAndStatus(stationId, VehicleStatus.MAINTENANCE);
+        List<Vehicle> vehicles = vehicleRepository.findByStationStationIdAndStatus(stationId, "Available");
+        List<Vehicle> rentedVehicles = vehicleRepository.findByStationStationIdAndStatus(stationId, "Rented");
+        List<Vehicle> maintenanceVehicles = vehicleRepository.findByStationStationIdAndStatus(stationId, "Maintenance");
         
         Map<String, Object> summary = new HashMap<>();
         summary.put("totalVehicles", vehicles.size() + rentedVehicles.size() + maintenanceVehicles.size());
