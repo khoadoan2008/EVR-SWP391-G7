@@ -84,7 +84,6 @@ public class UserService {
         log.setTimestamp(LocalDateTime.now());
         auditLogRepository.save(log);
     }
-
     /**
      * GET USER BY ID
      * - Retrieves user from database
