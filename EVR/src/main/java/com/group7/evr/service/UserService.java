@@ -232,7 +232,7 @@ public class UserService {
         
         // Validate status
         if (!isValidStatus(status)) {
-            throw new RuntimeException("Invalid status. Must be: Active, Suspended, Banned");
+            throw new RuntimeException("Invalid status. Must be: Active, Suspended, Deleted");
         }
 
         String oldStatus = user.getStatus().toString();
