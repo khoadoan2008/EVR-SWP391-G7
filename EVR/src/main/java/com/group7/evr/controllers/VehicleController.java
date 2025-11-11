@@ -23,8 +23,8 @@ public class VehicleController {
     }
 
     @GetMapping("/vehicles/{id}")
-    public ResponseEntity<Vehicle> getVehicle(@RequestParam Integer vehicleId) {
-        return ResponseEntity.ok(vehicleService.getVehicle(vehicleId));
+    public ResponseEntity<Vehicle> getVehicle(@PathVariable Integer id) {
+        return ResponseEntity.ok(vehicleService.getVehicle(id));
     }
 
     @GetMapping("/vehicles")
