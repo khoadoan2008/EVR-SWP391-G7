@@ -190,11 +190,12 @@ public class UserServiceImpl implements UserService {
     @Override
     public Map<String, Object> getAllUsers(int page, int size, String role, String status) {
         List<User> allUsers = userRepository.findAll();
+        System.out.println("findAll() count: " + allUsers.size());
 
         // Apply filters
         List<User> filteredUsers = allUsers.stream()
-                .filter(user -> role == null || user.getRole().toString().equals(role))
-                .filter(user -> status == null || user.getStatus().toString().equals(status))
+                .filter(user -> role == null || user.getRole().name().equals(role))
+                .filter(user -> status == null || user.getStatus().name().equals(status))
                 .toList();
 
         // Apply pagination

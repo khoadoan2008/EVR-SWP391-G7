@@ -50,7 +50,7 @@ public class User {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "Status")
-    private UserStatus status = UserStatus.ACTIVE;
+    private UserStatus status = UserStatus.SUSPENDED;
 
     // ⚠️ Đây là phần gây lỗi — phải map đúng tên foreign key trong bảng Users
     @ManyToOne
