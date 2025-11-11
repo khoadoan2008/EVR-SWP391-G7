@@ -26,6 +26,13 @@ public class BookingService {
     @Autowired
     private UserService userService;
 
+    /**
+     * CREATE NEW BOOKING
+     * - Validates vehicle availability and time conflicts
+     * - Sets vehicle status to RENTED
+     * - Sets booking status to PENDING
+     * - Logs audit trail for booking creation
+     */
     public Booking createBooking(Booking booking, User user) {
         Vehicle vehicle = vehicleRepository.findById(booking.getVehicle().getVehicleId()).orElseThrow();
         
@@ -54,13 +61,22 @@ public class BookingService {
         return bookingRepository.save(booking);
     }
 
-    // --- New: Get booking by ID ---
+    /**
+     * GET BOOKING BY ID
+     * - Retrieves booking details by booking ID
+     * - Throws exception if booking not found
+     */
     public Booking getBookingById(Integer bookingId) {
         return bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Booking not found"));
     }
 
-    // --- New: Enhanced user bookings with filters ---
+    /**
+     * GET USER BOOKINGS WITH FILTERS AND PAGINATION
+     * - Supports filtering by status, date range
+     * - Implements pagination for large result sets
+     * - Returns metadata: totalCount, page, size, totalPages
+     */
     public Map<String, Object> getUserBookingsWithFilters(Integer userId, String status, String fromDate, String toDate, int page, int size) {
         List<Booking> allBookings = bookingRepository.findByUserUserId(userId);
         
@@ -99,6 +115,12 @@ public class BookingService {
                 });
     }
 
+    /**
+     * CHECK-IN BOOKING (Staff function)
+     * - Updates booking status to CONFIRMED
+     * - Assigns staff member who processed check-in
+     * - Future: would generate rental contract
+     */
     public Booking checkIn(Integer bookingId, User user, User staff) {
         Booking booking = bookingRepository.findById(bookingId).orElseThrow();
         booking.setBookingStatus(BookingStatus.CONFIRMED);
@@ -108,6 +130,12 @@ public class BookingService {
         return bookingRepository.save(booking);
     }
 
+    /**
+     * RETURN VEHICLE AND COMPLETE BOOKING
+     * - Sets booking status to COMPLETED
+     * - Returns vehicle to AVAILABLE status
+     * - Logs vehicle return audit trail
+     */
     public Booking returnVehicle(Integer bookingId, User user, User staff) {
         Booking booking = bookingRepository.findById(bookingId).orElseThrow();
         booking.setBookingStatus(BookingStatus.COMPLETED);
@@ -118,10 +146,21 @@ public class BookingService {
         return bookingRepository.save(booking);
     }
 
+    /**
+     * GET USER BOOKING HISTORY
+     * - Retrieves all bookings for a specific user
+     * - Used for history display and analytics
+     */
     public List<Booking> getUserHistory(Integer userId) {
         return bookingRepository.findByUserUserId(userId);
     }
 
+    /**
+     * GET BASIC USER ANALYTICS
+     * - Calculates total bookings count
+     * - Calculates total spending amount
+     * - Returns simple statistics for user dashboard
+     */
     public Map<String, Object> getUserAnalytics(Integer userId) {
         List<Booking> bookings = getUserHistory(userId);
         BigDecimal totalCost = bookings.stream().map(Booking::getTotalPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -132,7 +171,13 @@ public class BookingService {
         return stats;
     }
 
-    // --- New: Advanced Analytics ---
+    /**
+     * GET ADVANCED USER ANALYTICS
+     * - Peak/Off-peak hour analysis
+     * - Total distance traveled calculation
+     * - Spending breakdown by categories
+     * - Comprehensive user behavior insights
+     */
     public Map<String, Object> getAdvancedUserAnalytics(Integer userId) {
         List<Booking> bookings = getUserHistory(userId);
         
@@ -168,7 +213,13 @@ public class BookingService {
         return analytics;
     }
 
-    // --- New: Modify booking ---
+    /**
+     * MODIFY EXISTING BOOKING
+     * - Updates booking time or vehicle
+     * - Validates booking can be modified (not COMPLETED/CANCELLED)
+     * - Handles vehicle switching with status management
+     * - Logs all modification actions
+     */
     public Booking modifyBooking(Integer bookingId, Booking updates, User actor) {
         Booking booking = bookingRepository.findById(bookingId).orElseThrow();
         if (BookingStatus.COMPLETED.equals(booking.getBookingStatus()) || BookingStatus.CANCELLED.equals(booking.getBookingStatus())) {
@@ -193,7 +244,13 @@ public class BookingService {
         return bookingRepository.save(booking);
     }
 
-    // --- New: Cancel booking ---
+    /**
+     * CANCEL BOOKING
+     * - Sets booking status to CANCELLED
+     * - Returns vehicle to AVAILABLE status
+     * - Idempotent: returns booking if already cancelled
+     * - Logs cancellation audit trail
+     */
     public Booking cancelBooking(Integer bookingId, User actor) {
         Booking booking = bookingRepository.findById(bookingId).orElseThrow();
         if (BookingStatus.COMPLETED.equals(booking.getBookingStatus()) || BookingStatus.CANCELLED.equals(booking.getBookingStatus())) {
@@ -207,7 +264,13 @@ public class BookingService {
         return bookingRepository.save(booking);
     }
 
-    // --- New: Enhanced Settlement ---
+    /**
+     * SETTLE BOOKING AND CALCULATE FEES
+     * - Calculates base price and additional fees
+     * - Includes: late fees, damage fees, energy fees
+     * - Returns detailed fee breakdown
+     * - Used for final payment processing
+     */
     public Map<String, Object> settleBooking(Integer bookingId, User actor) {
         Booking booking = bookingRepository.findById(bookingId).orElseThrow();
         

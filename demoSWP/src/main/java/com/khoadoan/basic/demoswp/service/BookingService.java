@@ -13,6 +13,7 @@ public interface BookingService {
     public Booking returnVehicle(Integer bookingId, User user, User staff);
     public java.util.List<Booking> getUserHistory(Integer userId);
     public Map<String, Object> getUserAnalytics(Integer userId);
+    public Map<String, Object> getAdvancedUserAnalytics(Integer userId);
     public Booking modifyBooking(Integer bookingId, Booking updates, User actor);
     public Booking cancelBooking(Integer bookingId, User actor);
     public Map<String, Object> settleBooking(Integer bookingId, User actor);
