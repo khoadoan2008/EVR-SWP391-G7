@@ -1,88 +1,55 @@
-import React, { useState } from 'react';
-import './App.css';
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
+import 'bootstrap/dist/css/bootstrap.min.css'; // For styling
+import HomePage from './pages/HomePage'; // We'll create these files
+import ServicesPage from './pages/ServicesPage';
+import BookingPage from './pages/BookingPage';
+import VehicleDetailsPage from './pages/VehicleDetailsPage';
+import ConfirmationPage from './pages/ConfirmationPage';
+import NewsPage from './pages/NewsPage';
+import ContactPage from './pages/ContactPage';
+import LoginPage from './pages/LoginPage';
+import DashboardPage from './pages/DashboardPage';
+import AdminDashboardPage from './pages/AdminDashboardPage';
+import StaffDashboardPage from './pages/StaffDashboardPage';
 
 function App() {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    age: '',
-    license: ''
-  });
-  const [error, setError] = useState('');
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // BR-03: Age validation
-    if (formData.age < 18) {
-      setError('Must be 18+ to register');
-      return;
-    }
-    if (!formData.license) {
-      setError('License number required');
-      return;
-    }
-    setError('');
-    alert(`Registered: ${formData.email}`);
-  };
-
   return (
-    <div className="App" style={{ padding: '20px', maxWidth: '400px', margin: '0 auto' }}>
-      <h1>EV Rental - Register</h1>
-      <form onSubmit={handleSubmit}>
-        <input
-          name="email"
-          type="email"
-          placeholder="Email"
-          value={formData.email}
-          onChange={handleChange}
-          required
-          style={{ display: 'block', margin: '10px 0', padding: '10px', width: '100%' }}
-        />
-        <input
-          name="password"
-          type="password"
-          placeholder="Password"
-          value={formData.password}
-          onChange={handleChange}
-          required
-          style={{ display: 'block', margin: '10px 0', padding: '10px', width: '100%' }}
-        />
-        <input
-          name="age"
-          type="number"
-          placeholder="Age"
-          value={formData.age}
-          onChange={handleChange}
-          required
-          style={{ display: 'block', margin: '10px 0', padding: '10px', width: '100%' }}
-        />
-        <input
-          name="license"
-          placeholder="Driver License Number"
-          value={formData.license}
-          onChange={handleChange}
-          required
-          style={{ display: 'block', margin: '10px 0', padding: '10px', width: '100%' }}
-        />
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        <button 
-          type="submit" 
-          style={{ 
-            padding: '10px 20px', 
-            background: '#007bff', 
-            color: 'white', 
-            border: 'none', 
-            width: '100%' 
-          }}
-        >
-          Register
-        </button>
-      </form>
-    </div>
+    <Router>
+      <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div className="container">
+          <a className="navbar-brand" href="/">
+            <img src="gf-logo.png" alt="GF Logo" style={{ width: 50 }} /> {/* Add your logo image */}
+          </a>
+          <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span className="navbar-toggler-icon"></span>
+          </button>
+          <div className="collapse navbar-collapse" id="navbarNav">
+            <ul className="navbar-nav me-auto">
+              <li className="nav-item"><Link className="nav-link" to="/">Dịch vụ</Link></li>
+              <li className="nav-item"><Link className="nav-link" to="/used-cars">Mua xe cũ chính hãng</Link></li>
+              <li className="nav-item"><Link className="nav-link" to="/limo">Limo Green</Link></li>
+              <li className="nav-item"><Link className="nav-link" to="/intro">Giới thiệu</Link></li>
+              <li className="nav-item"><Link className="nav-link" to="/news">Tin tức</Link></li>
+            </ul>
+            <button className="btn btn-outline-light">Đăng nhập</button>
+          </div>
+        </div>
+      </nav>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/services" element={<ServicesPage />} />
+        <Route path="/booking" element={<BookingPage />} />
+        <Route path="/vehicle-details" element={<VehicleDetailsPage />} />
+        <Route path="/confirmation" element={<ConfirmationPage />} />
+        <Route path="/news" element={<NewsPage />} />
+        <Route path="/contact" element={<ContactPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/admin-dashboard" element={<AdminDashboardPage />} />
+        <Route path="/staff-dashboard" element={<StaffDashboardPage />} />
+      </Routes>
+    </Router>
   );
 }
 

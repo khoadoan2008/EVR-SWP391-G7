@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "@react-google-maps/api": "^2.20.7",
+    "bootstrap": "^5.3.8",
+    "react-bootstrap": "^2.10.10",
+    "react-datepicker": "^8.8.0",
+    "react-router-dom": "^7.9.5"
+  }
+}
