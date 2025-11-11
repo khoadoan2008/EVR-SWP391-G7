@@ -15,5 +15,4 @@ public interface VehicleService {
     public Vehicle createVehicle(Vehicle vehicle);
     public Vehicle updateVehicle(Integer vehicleId, Vehicle vehicleUpdates);
     public Map<String, Object> deleteVehicle(Integer vehicleId);
-
 }

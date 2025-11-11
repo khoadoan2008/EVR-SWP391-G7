@@ -12,4 +12,8 @@ public interface VehicleRepository extends JpaRepository<Vehicle,Integer> {
     List<Vehicle> findByStationStationId(Integer stationId);
     List<Vehicle> findByModelModelId(Integer modelId);
     List<Vehicle> findByBatteryLevelGreaterThanEqual(BigDecimal minBattery);
+
+    Vehicle findByVehicleId(Integer vehicleId);
+
+    List<Vehicle> findByModelModelIdAndBatteryLevelGreaterThanEqual(Integer modelId, BigDecimal minBattery);
 }
