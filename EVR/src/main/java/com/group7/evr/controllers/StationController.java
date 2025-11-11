@@ -13,14 +13,13 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api")
 public class StationController {
-    @Autowired
-    private StationRepository stationRepository;
+
     @Autowired
     private StationService stationService;
 
     @GetMapping("/stations")
     public ResponseEntity<List<Station>> getStations() {
-        return ResponseEntity.ok(stationRepository.findAll());
+        return ResponseEntity.ok(stationService.getStations());
     }
 
     // Nearby stations by bounding box around lat/lng with radius (approx using degrees)
@@ -35,7 +34,7 @@ public class StationController {
         Double minLng = lng - radiusDeg;
         Double maxLng = lng + radiusDeg;
         return ResponseEntity.ok(
-                stationRepository.findByLatitudeBetweenAndLongitudeBetween(minLat, maxLat, minLng, maxLng)
+                stationService.getNearby(minLat, maxLat, minLng, maxLng)
         );
     }
 

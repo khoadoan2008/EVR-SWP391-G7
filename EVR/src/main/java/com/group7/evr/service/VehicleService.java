@@ -30,8 +30,8 @@ public class VehicleService {
     
     private final String uploadDir = "uploads/issues/";
 
-    public Map<String, Object> reportVehicleIssue(Integer vehicleId, Integer userId, String issueCategory, 
-                                                 String priority, String description, MultipartFile[] photos) {
+    public Map<String, Object> reportVehicleIssue(Integer vehicleId, Integer userId, String issueCategory,
+                                                  String priority, String description, MultipartFile[] photos) {
         // Validate vehicle exists
         Vehicle vehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> new RuntimeException("Vehicle not found"));

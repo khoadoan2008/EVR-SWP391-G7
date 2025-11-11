@@ -8,22 +8,23 @@ import com.khoadoan.basic.demoswp.repository.IssueReportRepository;
 import com.khoadoan.basic.demoswp.repository.StationRepository;
 import com.khoadoan.basic.demoswp.repository.UserRepository;
 import com.khoadoan.basic.demoswp.repository.VehicleRepository;
-import entity.*;
-import repository.*;
 
+import com.khoadoan.basic.demoswp.service.VehicleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
-public class VehicleServiceImpl {
+public class VehicleServiceImpl implements VehicleService {
     @Autowired
     private VehicleRepository vehicleRepository;
     @Autowired
@@ -37,6 +38,38 @@ public class VehicleServiceImpl {
     
     private final String uploadDir = "uploads/issues/";
 
+    @Override
+    public List<Vehicle> getAvailableVehicles(Integer stationId){
+        return vehicleRepository.findByStationStationIdAndStatus(stationId, "Available");
+    }
+
+    @Override
+    public Vehicle getVehicle(Integer vehicleId) {
+        return vehicleRepository.getVehicleById(vehicleId);
+    }
+
+    @Override
+    public List<Vehicle> findVehicles(Integer modelId, BigDecimal minBattery) {
+        // Case 1: Both filters provided
+        if (modelId != null && minBattery != null) {
+            return vehicleRepository.findByModelModelIdAndBatteryLevelGreaterThanEqual(modelId, minBattery);
+        }
+
+        // Case 2: Only model filter
+        if (modelId != null) {
+            return vehicleRepository.findByModelModelId(modelId);
+        }
+
+        // Case 3: Only battery filter
+        if (minBattery != null) {
+            return vehicleRepository.findByBatteryLevelGreaterThanEqual(minBattery);
+        }
+
+        // Case 4: No filters - return all
+        return vehicleRepository.findAll();
+    }
+
+    @Override
     public Map<String, Object> reportVehicleIssue(Integer vehicleId, Integer userId, String issueCategory, 
                                                  String priority, String description, MultipartFile[] photos) {
         // Validate vehicle exists
@@ -110,8 +143,7 @@ public class VehicleServiceImpl {
         
         return response;
     }
-    
-    
+
     private String saveFile(MultipartFile file) throws IOException {
         Path path = Paths.get(uploadDir + file.getOriginalFilename());
         Files.write(path, file.getBytes());
@@ -130,6 +162,7 @@ public class VehicleServiceImpl {
     }
 
     // --- Admin: Vehicle CRUD operations ---
+    @Override
     public Vehicle createVehicle(Vehicle vehicle) {
         // Validate required fields
         if (vehicle.getPlateNumber() == null || vehicle.getPlateNumber().trim().isEmpty()) {
@@ -158,6 +191,7 @@ public class VehicleServiceImpl {
         return savedVehicle;
     }
 
+    @Override
     public Vehicle updateVehicle(Integer vehicleId, Vehicle vehicleUpdates) {
         Vehicle existingVehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> new RuntimeException("Vehicle not found"));
@@ -189,6 +223,7 @@ public class VehicleServiceImpl {
         return updatedVehicle;
     }
 
+    @Override
     public Map<String, Object> deleteVehicle(Integer vehicleId) {
         Vehicle vehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> new RuntimeException("Vehicle not found"));

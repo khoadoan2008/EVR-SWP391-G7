@@ -1,8 +1,8 @@
 package com.khoadoan.basic.demoswp.service.Impl;
 
-import com.group7.evr.entity.*;
-import com.group7.evr.enums.*;
-import com.group7.evr.repository.*;
+import com.khoadoan.basic.demoswp.repository.*;
+import com.khoadoan.basic.demoswp.entity.*;
+import com.khoadoan.basic.demoswp.service.StationStaffService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
-public class StationStaffServiceImpl {
+public class StationStaffServiceImpl implements StationStaffService {
     @Autowired
     private VehicleRepository vehicleRepository;
     @Autowired
@@ -37,9 +37,11 @@ public class StationStaffServiceImpl {
     private AuditLogRepository auditLogRepository;
     @Autowired
     private MaintenanceRepository maintenanceRepository;
+
     private final String uploadDir = "uploads/reports/"; // Configure properly (e.g., use S3 in production)
 
     // a. View vehicles by status (available, rented, booked)
+    @Override
     public List<Vehicle> getVehiclesByStatus(Integer staffId, String status) {
         User staff = userRepository.findById(staffId)
                 .orElseThrow(() -> new RuntimeException("Staff not found"));
@@ -62,6 +64,7 @@ public class StationStaffServiceImpl {
     }
 
     // a. Create handover report (pre/post rental)
+    @Override
     public VehicleConditionReport createHandoverReport(Integer staffId, Integer contractId, Integer vehicleId,
                                                        BigDecimal battery, String damageDescription, MultipartFile[] photos,
                                                        String reportType) throws IOException {
@@ -101,6 +104,7 @@ public class StationStaffServiceImpl {
     }
 
     // a. Sign contract
+    @Override
     public Contract signContract(Integer staffId, Integer bookingId, String renterSignature, String staffSignature) {
         User staff = userRepository.findById(staffId)
                 .orElseThrow(() -> new RuntimeException("Staff not found"));
@@ -122,6 +126,7 @@ public class StationStaffServiceImpl {
     }
 
     // b. Verify customer
+    @Override
     public User verifyCustomer(Integer staffId, Integer userId) {
         User staff = userRepository.findById(staffId)
                 .orElseThrow(() -> new RuntimeException("Staff not found"));
@@ -137,6 +142,7 @@ public class StationStaffServiceImpl {
     }
 
     // c. Record payment at station
+    @Override
     public Payment recordPayment(Integer staffId, Integer bookingId, String method, BigDecimal amount) {
         User staff = userRepository.findById(staffId)
                 .orElseThrow(() -> new RuntimeException("Staff not found"));
@@ -160,6 +166,7 @@ public class StationStaffServiceImpl {
     }
 
     // c. Create deposit
+    @Override
     public Deposit createDeposit(Integer staffId, Integer bookingId, BigDecimal amount) {
         User staff = userRepository.findById(staffId)
                 .orElseThrow(() -> new RuntimeException("Staff not found"));
@@ -181,6 +188,7 @@ public class StationStaffServiceImpl {
     }
 
     // c. Refund deposit
+    @Override
     public Deposit refundDeposit(Integer staffId, Integer depositId) {
         User staff = userRepository.findById(staffId)
                 .orElseThrow(() -> new RuntimeException("Staff not found"));
@@ -199,6 +207,7 @@ public class StationStaffServiceImpl {
     }
 
     // d. Update vehicle status
+    @Override
     public Vehicle updateVehicleStatus(Integer staffId, Integer vehicleId, BigDecimal batteryLevel, BigDecimal mileage, String status) {
         User staff = userRepository.findById(staffId)
                 .orElseThrow(() -> new RuntimeException("Staff not found"));
@@ -219,6 +228,7 @@ public class StationStaffServiceImpl {
     }
 
     // d. Report vehicle issue
+    @Override
     public Complaint reportVehicleIssue(Integer staffId, Integer vehicleId, String issueDescription) {
         User staff = userRepository.findById(staffId)
                 .orElseThrow(() -> new RuntimeException("Staff not found"));
@@ -242,6 +252,7 @@ public class StationStaffServiceImpl {
     }
 
     // --- New: Maintenance CRUD ---
+    @Override
     public Maintenance createMaintenance(Integer staffId, Integer vehicleId, String issue, LocalDateTime scheduledAt) {
         User staff = userRepository.findById(staffId).orElseThrow();
         Vehicle vehicle = vehicleRepository.findById(vehicleId).orElseThrow();
@@ -260,6 +271,7 @@ public class StationStaffServiceImpl {
         return saved;
     }
 
+    @Override
     public Maintenance updateMaintenance(Integer staffId, Integer maintenanceId, String status, String remarks) {
         User staff = userRepository.findById(staffId).orElseThrow();
         Maintenance m = maintenanceRepository.findById(maintenanceId).orElseThrow();
@@ -276,6 +288,7 @@ public class StationStaffServiceImpl {
         return saved;
     }
 
+    @Override
     public List<Maintenance> listMaintenance(Integer staffId, String status) {
         User staff = userRepository.findById(staffId).orElseThrow();
         if (status != null) {

@@ -20,6 +20,14 @@ public class StationService {
     @Autowired
     private UserService userService;
 
+    public List<Station> getStations(){
+        return stationRepository.findAll();
+    }
+    //Lưu ý nghiệp vụ
+    public List<Station> getNearby(double minLat, double maxLat, double minLng, double maxLng){
+        return stationRepository.findByLatitudeBetweenAndLongitudeBetween(minLat, maxLat, minLng, maxLng);
+    }
+
     public Station createStation(Station station) {
         // Validate required fields
         if (station.getName() == null || station.getName().trim().isEmpty()) {
@@ -98,5 +106,7 @@ public class StationService {
         response.put("stationId", stationId);
         return response;
     }
+
+
 }
 

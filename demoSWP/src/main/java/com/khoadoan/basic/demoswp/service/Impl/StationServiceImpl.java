@@ -1,9 +1,10 @@
 package com.khoadoan.basic.demoswp.service.Impl;
 
-import com.group7.evr.entity.Station;
-import com.group7.evr.entity.Vehicle;
-import com.group7.evr.repository.StationRepository;
-import com.group7.evr.repository.VehicleRepository;
+
+import com.khoadoan.basic.demoswp.entity.*;
+import com.khoadoan.basic.demoswp.repository.StationRepository;
+import com.khoadoan.basic.demoswp.repository.VehicleRepository;
+import com.khoadoan.basic.demoswp.service.StationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -12,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-public class StationServiceImpl {
+public class StationServiceImpl implements StationService {
     @Autowired
     private StationRepository stationRepository;
     @Autowired
@@ -20,6 +21,17 @@ public class StationServiceImpl {
     @Autowired
     private UserServiceImpl userService;
 
+    @Override
+    public List<Station> getStations() {
+        return List.of();
+    }
+
+    @Override
+    public List<Station> getNearby(double minLat, double maxLat, double minLng, double maxLng) {
+        return List.of();
+    }
+
+    @Override
     public Station createStation(Station station) {
         // Validate required fields
         if (station.getName() == null || station.getName().trim().isEmpty()) {
@@ -42,6 +54,7 @@ public class StationServiceImpl {
         return savedStation;
     }
 
+    @Override
     public Station updateStation(Integer stationId, Station stationUpdates) {
         Station existingStation = stationRepository.findById(stationId)
                 .orElseThrow(() -> new RuntimeException("Station not found"));
@@ -77,6 +90,7 @@ public class StationServiceImpl {
         return updatedStation;
     }
 
+    @Override
     public Map<String, Object> deleteStation(Integer stationId) {
         Station station = stationRepository.findById(stationId)
                 .orElseThrow(() -> new RuntimeException("Station not found"));

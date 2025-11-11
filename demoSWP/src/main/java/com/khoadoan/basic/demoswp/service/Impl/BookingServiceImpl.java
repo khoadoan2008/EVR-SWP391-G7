@@ -205,6 +205,38 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public Map<String, Object> settleBooking(Integer bookingId, User actor) {
-        return Map.of();
+        Booking booking = bookingRepository.findById(bookingId).orElseThrow();
+
+        BigDecimal basePrice = booking.getTotalPrice() != null ? booking.getTotalPrice() : BigDecimal.ZERO;
+
+        BigDecimal lateFee = calculateLateFee(booking);
+        BigDecimal damageFee = calculateDamageFee(booking);
+        BigDecimal energyFee = calculateEnergyFee(booking);
+        BigDecimal extraFees = lateFee.add(damageFee).add(energyFee);
+        BigDecimal total = basePrice.add(extraFees);
+        Map<String, Object> settlement = new HashMap<>();
+        settlement.put("basePrice", basePrice);
+        settlement.put("lateFee", lateFee);
+        settlement.put("damageFee", damageFee);
+        settlement.put("energyFee", energyFee);
+        settlement.put("extraFees", extraFees);
+        settlement.put("total", total);
+        userService.logAudit(actor, "Settled booking " + bookingId + " with total: " + total);
+        return settlement;
+    }
+
+    private BigDecimal calculateLateFee(Booking booking) {
+        // Mock calculation - would use actual time differences
+        return BigDecimal.ZERO;
+    }
+
+    private BigDecimal calculateDamageFee(Booking booking) {
+        // Mock calculation - would check vehicle condition reports
+        return BigDecimal.ZERO;
+    }
+
+    private BigDecimal calculateEnergyFee(Booking booking) {
+        // Mock calculation - would check battery usage
+        return BigDecimal.ZERO;
     }
 }
