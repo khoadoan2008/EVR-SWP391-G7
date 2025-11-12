@@ -2,12 +2,14 @@ package com.khoadoan.basic.demoswp.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Pattern;
+import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "VehicleConditionReport")
+@Data
 public class VehicleConditionReport {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

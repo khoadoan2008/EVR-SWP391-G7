@@ -141,7 +141,12 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public Map<String, Object> getUserAnalytics(Integer userId) {
         List<Booking> bookings = getUserHistory(userId);
-        BigDecimal totalCost = bookings.stream().map(Booking::getTotalPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalCost = BigDecimal.ZERO;
+        for (Booking booking : bookings) {
+            if (booking.getTotalPrice() != null) {
+                totalCost = totalCost.add(booking.getTotalPrice());
+            }
+        }
         long count = bookings.size();
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalBookings", count);
@@ -149,18 +154,89 @@ public class BookingServiceImpl implements BookingService {
         return stats;
     }
 
+    // Bổ sung sau
+    @Override
+    public Map<String, Object> getAdvancedUserAnalytics(Integer userId) {
+        return Map.of();
+    }
+
     @Override
     public Booking modifyBooking(Integer bookingId, Booking updates, User actor) {
-        return null;
+        Booking booking = bookingRepository.findById(bookingId).orElseThrow(() -> new RuntimeException("Booking not found"));
+        if(booking.getBookingStatus().equals("Completed") || booking.getBookingStatus().equals("Cancelled")) {
+            throw new RuntimeException("Cannot modify completed or cancelled booking");
+        }
+        if(updates.getStartTime() != null) {
+            booking.setStartTime(updates.getStartTime());
+        }
+        if(updates.getEndTime() != null) {
+            booking.setEndTime(updates.getEndTime());
+        }
+        if(updates.getVehicle() != null && updates.getVehicle().getVehicleId() != null &&
+        !updates.getVehicle().getVehicleId().equals(booking.getVehicle().getVehicleId())) {
+            Vehicle currentVehicle = booking.getVehicle();
+            currentVehicle.setStatus("Available");
+            vehicleRepository.save(currentVehicle);
+            Vehicle nextVehicle = vehicleRepository.findById(updates.getVehicle().getVehicleId()).orElseThrow(() -> new RuntimeException("Next Vehicle not found"));
+            if(!nextVehicle.getStatus().equals("Available")) {
+                throw new RuntimeException("New vehicle is not available");
+            }
+            nextVehicle.setStatus("Rented");
+            vehicleRepository.save(nextVehicle);
+            booking.setVehicle(nextVehicle);
+        }
+        userService.logAudit(actor, "Modified booking " + bookingId);
+        return bookingRepository.save(booking);
     }
 
     @Override
     public Booking cancelBooking(Integer bookingId, User actor) {
-        return null;
+        Booking booking = bookingRepository.findById(bookingId).orElseThrow(() -> new RuntimeException("Booking not found"));
+        if(booking.getBookingStatus().equals("Completed") || booking.getBookingStatus().equals("Cancelled")) {
+            return booking;
+        }
+        booking.setBookingStatus("Cancelled");
+        Vehicle vehicle = booking.getVehicle();
+        vehicle.setStatus("Available");
+        vehicleRepository.save(vehicle);
+        userService.logAudit(actor, "Cancelled booking " + bookingId);
+        return bookingRepository.save(booking);
     }
 
     @Override
     public Map<String, Object> settleBooking(Integer bookingId, User actor) {
-        return Map.of();
+        Booking booking = bookingRepository.findById(bookingId).orElseThrow();
+
+        BigDecimal basePrice = booking.getTotalPrice() != null ? booking.getTotalPrice() : BigDecimal.ZERO;
+
+        BigDecimal lateFee = calculateLateFee(booking);
+        BigDecimal damageFee = calculateDamageFee(booking);
+        BigDecimal energyFee = calculateEnergyFee(booking);
+        BigDecimal extraFees = lateFee.add(damageFee).add(energyFee);
+        BigDecimal total = basePrice.add(extraFees);
+        Map<String, Object> settlement = new HashMap<>();
+        settlement.put("basePrice", basePrice);
+        settlement.put("lateFee", lateFee);
+        settlement.put("damageFee", damageFee);
+        settlement.put("energyFee", energyFee);
+        settlement.put("extraFees", extraFees);
+        settlement.put("total", total);
+        userService.logAudit(actor, "Settled booking " + bookingId + " with total: " + total);
+        return settlement;
+    }
+
+    private BigDecimal calculateLateFee(Booking booking) {
+        // Mock calculation - would use actual time differences
+        return BigDecimal.ZERO;
+    }
+
+    private BigDecimal calculateDamageFee(Booking booking) {
+        // Mock calculation - would check vehicle condition reports
+        return BigDecimal.ZERO;
+    }
+
+    private BigDecimal calculateEnergyFee(Booking booking) {
+        // Mock calculation - would check battery usage
+        return BigDecimal.ZERO;
     }
 }

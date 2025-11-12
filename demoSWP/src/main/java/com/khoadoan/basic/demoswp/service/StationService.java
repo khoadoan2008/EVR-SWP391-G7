@@ -1,7 +1,9 @@
-package com.group7.evr.service;
+package com.khoadoan.basic.demoswp.service;
 
-import com.group7.evr.entity.Station;
+import com.khoadoan.basic.demoswp.entity.Station;
+import org.springframework.http.ResponseEntity;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -11,4 +13,5 @@ public interface StationService {
     public Station createStation(Station station);
     public Station updateStation(Integer stationId, Station stationUpdates);
     public Map<String, Object> deleteStation(Integer stationId);
+
 }

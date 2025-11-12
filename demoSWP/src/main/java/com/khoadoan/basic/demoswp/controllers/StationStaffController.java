@@ -1,8 +1,8 @@
 package com.khoadoan.basic.demoswp.controllers;
 
-import com.group7.evr.entity.Maintenance;
-import com.group7.evr.entity.VehicleConditionReport;
-import com.group7.evr.service.StationStaffService;
+import com.khoadoan.basic.demoswp.entity.Maintenance;
+import com.khoadoan.basic.demoswp.entity.VehicleConditionReport;
+import com.khoadoan.basic.demoswp.service.StationStaffService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

@@ -1,8 +1,10 @@
-package com.khoadoan.basic.demoswp.service.Impl;
+package com.group7.evr.service.Impl;
 
-import com.khoadoan.basic.demoswp.repository.*;
-import com.khoadoan.basic.demoswp.entity.*;
-import com.khoadoan.basic.demoswp.service.StationStaffService;
+import com.group7.evr.entity.*;
+import com.group7.evr.enums.*;
+import com.group7.evr.repository.*;
+import com.group7.evr.service.StationStaffService;
+import com.group7.evr.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -13,10 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 @Service
 public class StationStaffServiceImpl implements StationStaffService {
@@ -37,10 +36,9 @@ public class StationStaffServiceImpl implements StationStaffService {
     @Autowired
     private ComplaintRepository complaintRepository;
     @Autowired
-    private AuditLogRepository auditLogRepository;
-    @Autowired
     private MaintenanceRepository maintenanceRepository;
-
+    @Autowired
+    private UserService userService;
     private final String uploadDir = "uploads/reports/"; // Configure properly (e.g., use S3 in production)
 
     // a. View vehicles by status (available, rented, booked)
@@ -55,15 +53,15 @@ public class StationStaffServiceImpl implements StationStaffService {
         if ("Booked".equalsIgnoreCase(status)) {
             // Get vehicles with Pending or Confirmed bookings
             List<Booking> bookings = bookingRepository.findByStationStationIdAndBookingStatusIn(
-                    stationId, List.of("Pending", "Confirmed"));
-            Set<Vehicle> vehicles = new HashSet<>();
-            for(Booking b : bookings) {
-                vehicles.add(b.getVehicle());
-            }
-            return new ArrayList<>(vehicles);
+                    stationId, List.of(BookingStatus.PENDING, BookingStatus.CONFIRMED));
+            return bookings.stream()
+                    .map(Booking::getVehicle)
+                    .distinct()
+                    .toList();
         }
         // Map string to enum for repository
-        return vehicleRepository.findByStationStationIdAndStatus(stationId, status);
+        VehicleStatus enumStatus = VehicleStatus.valueOf(status.toUpperCase());
+        return vehicleRepository.findByStationStationIdAndStatus(stationId, enumStatus);
     }
 
     // a. Create handover report (pre/post rental)
@@ -100,9 +98,9 @@ public class StationStaffServiceImpl implements StationStaffService {
             }
             report.setPhotos(photoUrls.toString());
         }
-        report.setReportType(reportType); // Convert string to enum
+        report.setReportType(ReportType.valueOf(reportType.toUpperCase())); // Convert string to enum
         VehicleConditionReport savedReport = reportRepository.save(report);
-        logAudit(staff, "Created " + reportType + " report for contract " + contractId);
+        userService.logAudit(staff, "Created " + reportType + " report for contract " + contractId);
         return savedReport;
     }
 
@@ -124,7 +122,7 @@ public class StationStaffServiceImpl implements StationStaffService {
         contract.setRenterSignature(renterSignature);
         contract.setStaffSignature(staffSignature);
         Contract savedContract = contractRepository.save(contract);
-        logAudit(staff, "Signed contract for booking " + bookingId);
+        userService.logAudit(staff, "Signed contract for booking " + bookingId);
         return savedContract;
     }
 
@@ -138,9 +136,9 @@ public class StationStaffServiceImpl implements StationStaffService {
 
         // Logic for verification (e.g., check personalIdImage, licenseImage)
         // Assume verification sets status to Active
-        user.setStatus("Active");
+        user.setStatus(UserStatus.ACTIVE);
         User updatedUser = userRepository.save(user);
-        logAudit(staff, "Verified customer " + userId);
+        userService.logAudit(staff, "Verified customer " + userId);
         return updatedUser;
     }
 
@@ -159,12 +157,12 @@ public class StationStaffServiceImpl implements StationStaffService {
 
         Payment payment = new Payment();
         payment.setBooking(booking);
-        payment.setMethod(method); // Convert string to enum
+        payment.setMethod(PaymentMethod.valueOf(method.toUpperCase())); // Convert string to enum
         payment.setAmount(amount);
-        payment.setStatus("Pending");
+        payment.setStatus(PaymentStatus.PENDING);
         payment.setPaymentDate(LocalDateTime.now());
         Payment savedPayment = paymentRepository.save(payment);
-        logAudit(staff, "Recorded payment " + savedPayment.getPaymentId() + " for booking " + bookingId);
+        userService.logAudit(staff, "Recorded payment " + savedPayment.getPaymentId() + " for booking " + bookingId);
         return savedPayment;
     }
 
@@ -184,9 +182,9 @@ public class StationStaffServiceImpl implements StationStaffService {
         Deposit deposit = new Deposit();
         deposit.setBooking(booking);
         deposit.setAmount(amount);
-        deposit.setStatus("Held");
+        deposit.setStatus(DepositStatus.HELD);
         Deposit savedDeposit = depositRepository.save(deposit);
-        logAudit(staff, "Created deposit " + savedDeposit.getDepositId() + " for booking " + bookingId);
+        userService.logAudit(staff, "Created deposit " + savedDeposit.getDepositId() + " for booking " + bookingId);
         return savedDeposit;
     }
 
@@ -203,9 +201,9 @@ public class StationStaffServiceImpl implements StationStaffService {
             throw new RuntimeException("Unauthorized station");
         }
 
-        deposit.setStatus("Refunded");
+        deposit.setStatus(DepositStatus.REFUNDED);
         Deposit updatedDeposit = depositRepository.save(deposit);
-        logAudit(staff, "Refunded deposit " + depositId);
+        userService.logAudit(staff, "Refunded deposit " + depositId);
         return updatedDeposit;
     }
 
@@ -224,9 +222,9 @@ public class StationStaffServiceImpl implements StationStaffService {
 
         vehicle.setBatteryLevel(batteryLevel);
         vehicle.setMileage(mileage);
-        vehicle.setStatus(status); // Convert string to enum
+        vehicle.setStatus(VehicleStatus.valueOf(status.toUpperCase())); // Convert string to enum
         Vehicle updatedVehicle = vehicleRepository.save(vehicle);
-        logAudit(staff, "Updated vehicle " + vehicleId + " status to " + status);
+        userService.logAudit(staff, "Updated vehicle " + vehicleId + " status to " + status);
         return updatedVehicle;
     }
 
@@ -248,9 +246,9 @@ public class StationStaffServiceImpl implements StationStaffService {
         complaint.setUser(staff); // Staff reporting
         complaint.setStaff(null);
         complaint.setIssueDescription(issueDescription + " for vehicle " + vehicleId);
-        complaint.setStatus("Pending");
+        complaint.setStatus(ComplaintStatus.PENDING);
         Complaint savedComplaint = complaintRepository.save(complaint);
-        logAudit(staff, "Reported issue for vehicle " + vehicleId);
+        userService.logAudit(staff, "Reported issue for vehicle " + vehicleId);
         return savedComplaint;
     }
 
@@ -267,10 +265,10 @@ public class StationStaffServiceImpl implements StationStaffService {
         m.setStation(staff.getStation());
         m.setStaff(staff);
         m.setIssueDescription(issue);
-        m.setStatus("Open");
+        m.setStatus(MaintenanceStatus.OPEN);
         m.setScheduledAt(scheduledAt);
         Maintenance saved = maintenanceRepository.save(m);
-        logAudit(staff, "Created maintenance " + saved.getMaintenanceId());
+        userService.logAudit(staff, "Created maintenance " + saved.getMaintenanceId());
         return saved;
     }
 
@@ -281,13 +279,13 @@ public class StationStaffServiceImpl implements StationStaffService {
         if (!m.getStation().getStationId().equals(staff.getStation().getStationId())) {
             throw new RuntimeException("Unauthorized station");
         }
-        m.setStatus(status);
+        m.setStatus(MaintenanceStatus.valueOf(status.toUpperCase()));
         m.setRemarks(remarks);
-        if ("Closed".equals(m.getStatus())) {
+        if (MaintenanceStatus.CLOSED.equals(m.getStatus())) {
             m.setClosedAt(LocalDateTime.now());
         }
         Maintenance saved = maintenanceRepository.save(m);
-        logAudit(staff, "Updated maintenance " + maintenanceId + " to " + status);
+        userService.logAudit(staff, "Updated maintenance " + maintenanceId + " to " + status);
         return saved;
     }
 
@@ -295,7 +293,7 @@ public class StationStaffServiceImpl implements StationStaffService {
     public List<Maintenance> listMaintenance(Integer staffId, String status) {
         User staff = userRepository.findById(staffId).orElseThrow();
         if (status != null) {
-            return maintenanceRepository.findByStatus(status);
+            return maintenanceRepository.findByStatus(MaintenanceStatus.valueOf(status.toUpperCase()));
         }
         return maintenanceRepository.findByStationStationId(staff.getStation().getStationId());
     }
@@ -306,11 +304,4 @@ public class StationStaffServiceImpl implements StationStaffService {
         return path.toString();
     }
 
-    private void logAudit(User user, String action) {
-        AuditLog log = new AuditLog();
-        log.setUser(user);
-        log.setAction(action);
-        log.setTimestamp(LocalDateTime.now());
-        auditLogRepository.save(log);
-    }
 }
