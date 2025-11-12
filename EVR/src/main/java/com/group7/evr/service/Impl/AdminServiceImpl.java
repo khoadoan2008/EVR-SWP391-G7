@@ -1,6 +1,7 @@
 package com.group7.evr.service.Impl;
 
 import com.group7.evr.entity.*;
+import com.group7.evr.enums.UserRole;
 import com.group7.evr.enums.VehicleStatus;
 import com.group7.evr.repository.*;
 import com.group7.evr.service.AdminService;
@@ -72,7 +73,7 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public List<User> getCustomersWithRiskFlags() {
         return userRepository.findAll().stream()
-                .filter(user -> "Customer".equals(user.getRole()))
+                .filter(user -> UserRole.CUSTOMER.equals(user.getRole()))
                 .filter(user -> riskFlagRepository.findByUserUserId(user.getUserId()).size() > 0)
                 .toList();
     }
@@ -102,8 +103,10 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public List<User> getStaffByStation(Integer stationId) {
         return userRepository.findAll().stream()
-                .filter(user -> "Staff".equals(user.getRole()))
-                .filter(user -> user.getStation() != null && user.getStation().getStationId().equals(stationId))
+                .filter(user -> UserRole.STAFF.equals(user.getRole())) // SỬA: DÙNG ENUM
+                .filter(user -> stationId == null ||
+                        (user.getStation() != null &&
+                                user.getStation().getStationId().equals(stationId)))
                 .toList();
     }
 
