@@ -1,0 +1,27 @@
+Note Testing API
+
+
+UserController
+ - register: chưa có điều kiện email đăng kí mới phải khác những cái đã tồn tại, hình như phone cũng vậy(k biết có cần k)
+ - getUserById: chưa che password, tên bị lỗi nếu đặt tiếng Việt
+ - get all user: đã sửa enum.toString() (Sẽ thành CUSTOMRER) => .name() (thành Customer)
+ - Nếu CUSTOMER đang có booking thì có delete đc k
+ - Chưa có tạo Complaint của Customer
+
+VehicleController
+ - Buộc có đầy đủ thông tin hoặc làm sao đó, vì vẫn có thể tạo vehicle, tạo booking từ vehicle mặc dù vehicle null Station, Model(Có thể interface chọn select)
+
+BookingController
+ - Các chức năng có thể bị user k phải staff hoặc staff đã bị SUSPENDED thực hiện, truy cập bằng url
+ - Modify booking info thì totalPrice chưa cập nhật, sửa lại set StartTime với EndTime, vẫn set đc EndTime trước StartTime(chưa check xem có xung đột thời gian khác)
+ - getUserBookingsWithFilters, lỡ status đầu vào k chuẩn form thì k hiện ra gì, k có cái check
+
+StationStaffController
+ - Chưa tạo contract(chưa có gì để tạo contract) => createHandover k có ContractID để tạo, chưa test đc createHandover (khả năng là do ch có signContract)
+ - createMaintenance xong thì chưa update VehicleStatus thành MAINTENANCE
+ 
+AdminController:
+ - Thắc mắc: tại sao các tạo xóa sửa Staff k để trong AdminController luôn mà phải để trong StaffController
+ - Thắc mắc: điều xe thì e nghĩ chỉ cần toStationId chứ đâu cần fromStationId vì có thể truy xuất từ Vehicle, vừa lấy fromStationId vừa vehicleId có vẻ hơi thừa
+ - Chưa tạo đc complaint nên chưa test đc getComplaints
+ - Chưa test getRevenueReport, getUtilizationReport, getPeakHoursAnalysis, getDemandForecast
