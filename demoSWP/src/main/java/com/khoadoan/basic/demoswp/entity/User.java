@@ -49,7 +49,7 @@ public class User {
 
     @Column(name = "Status")
     @Pattern(regexp = "Active|Suspended|Deleted", message = "Status must be Active, Suspended, or Deleted")
-    private String status = "Active";
+    private String status = "Suspended";
 
     @ManyToOne
     @JoinColumn(name = "StationID")

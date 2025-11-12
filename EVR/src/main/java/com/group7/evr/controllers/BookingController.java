@@ -2,11 +2,11 @@ package com.group7.evr.controllers;
 
 import com.group7.evr.entity.Booking;
 import com.group7.evr.entity.User;
+import com.group7.evr.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.group7.evr.service.BookingService;
-import com.group7.evr.service.UserService;
 
 import java.util.List;
 import java.util.Map;

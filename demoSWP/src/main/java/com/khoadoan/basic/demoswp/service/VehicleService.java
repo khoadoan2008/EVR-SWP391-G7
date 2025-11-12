@@ -1,6 +1,6 @@
-package com.group7.evr.service;
+package com.khoadoan.basic.demoswp.service;
 
-import com.group7.evr.entity.Vehicle;
+import com.khoadoan.basic.demoswp.entity.Vehicle;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;

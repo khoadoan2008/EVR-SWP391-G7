@@ -1,6 +1,6 @@
-package com.group7.evr.service;
+package com.khoadoan.basic.demoswp.service;
 
-import com.group7.evr.entity.*;
+import com.khoadoan.basic.demoswp.entity.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,4 +18,5 @@ public interface AdminService {
     public Map<String, Object> getRevenueReport(Integer stationId, LocalDateTime from, LocalDateTime to);
     public Map<String, Object> getUtilizationReport(Integer stationId);
     public Map<String, Object> getPeakHoursAnalysis(Integer stationId);
+
 }

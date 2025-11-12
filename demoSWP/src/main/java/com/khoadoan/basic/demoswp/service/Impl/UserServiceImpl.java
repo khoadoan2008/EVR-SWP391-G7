@@ -27,10 +27,13 @@ public class UserServiceImpl implements UserService {
     private AuditLogRepository auditLogRepository;
     private final String uploadDir = "uploads/";
 
-    //Đăng kí mặc định là "Active" vậy sao verifyUser lại setStatus là "Active" nhỉ?
-
     @Override
     public User register(User user, MultipartFile personalIdImage, MultipartFile licenseImage) throws IOException {
+        // Check duplicate email
+        if (userRepository.findByEmail(user.getEmail()) != null) {
+            throw new RuntimeException("Email already registered");
+        }
+
         user.setRole("Customer");
         if (personalIdImage != null) {
             String fileName = saveFile(personalIdImage);
@@ -49,15 +52,29 @@ public class UserServiceImpl implements UserService {
     public User verifyUser(Integer userId, User staff) {
         User user = userRepository.findById(userId).
             orElseThrow(() -> new RuntimeException("User not found"));
+        // Chỉ verify nếu đang Suspended
+        if (!"Suspended".equals(user.getStatus())) {
+            throw new RuntimeException("Cannot verify user with status: " + user.getStatus());
+        }
         user.setStatus("Active");
         logAudit(staff, "Verified user " + userId);
         return userRepository.save(user);
     }
 
     private String saveFile(MultipartFile file) throws IOException {
-        Path path =  Paths.get(uploadDir + file.getOriginalFilename());
+        // Create directory if not exists
+        Files.createDirectories(Paths.get(uploadDir));
+
+        // Generate safe filename
+        String originalFileName = file.getOriginalFilename();
+        String safeFileName = System.currentTimeMillis() + "_" +
+                (originalFileName != null ?
+                        originalFileName.replaceAll("[^a-zA-Z0-9.-]", "_") : "file");
+
+        Path path = Paths.get(uploadDir + safeFileName);
         Files.write(path, file.getBytes());
-        return path.toString();
+
+        return safeFileName;
     }
 
     @Override
@@ -89,11 +106,25 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("User account is not active");
         }
         Map<String,Object> response = new HashMap<>();
-        response.put("user", user);  //Chưa che thông tin nhạy cảm
+        response.put("user", sanitizeUserData(user));  //Chưa che thông tin nhạy cảm
         response.put("message", "Login successful");
 
         logAudit(user, "User logged in");
         return response;
+    }
+
+    private User sanitizeUserData(User user) {
+        User sanitized = new User();
+        sanitized.setUserId(user.getUserId());
+        sanitized.setName(user.getName());
+        sanitized.setEmail(user.getEmail());
+        sanitized.setPhone(user.getPhone());
+        sanitized.setAddress(user.getAddress());
+        sanitized.setRole(user.getRole());
+        sanitized.setStatus(user.getStatus());
+        sanitized.setCreatedAt(user.getCreatedAt());
+        // Don't include password hash, personal documents, etc.
+        return sanitized;
     }
 
     //Cho update name, phone, address, email

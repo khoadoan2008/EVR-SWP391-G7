@@ -18,8 +18,8 @@ public class UserController {
 
     @PostMapping("/users/register")
     public ResponseEntity<User> register(@ModelAttribute User user,
-                                         @RequestPart(value = "personalIdImage", required = false) MultipartFile personalIdImage,
-                                         @RequestPart(value = "licenseImage", required = false) MultipartFile licenseImage) throws Exception {
+                                         @RequestParam(value = "personalIdImage", required = false) MultipartFile personalIdImage,
+                                         @RequestParam(value = "licenseImage", required = false) MultipartFile licenseImage) throws Exception {
         return ResponseEntity.ok(userService.register(user, personalIdImage, licenseImage));
     }
 

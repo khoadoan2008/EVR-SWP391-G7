@@ -1,14 +1,14 @@
-package com.khoadoan.basic.demoswp.service.Impl;
+package com.group7.evr.service.Impl;
 
-
-import com.khoadoan.basic.demoswp.entity.*;
-import com.khoadoan.basic.demoswp.repository.StationRepository;
-import com.khoadoan.basic.demoswp.repository.VehicleRepository;
-import com.khoadoan.basic.demoswp.service.StationService;
+import com.group7.evr.entity.Station;
+import com.group7.evr.entity.Vehicle;
+import com.group7.evr.repository.StationRepository;
+import com.group7.evr.repository.VehicleRepository;
+import com.group7.evr.service.StationService;
+import com.group7.evr.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,15 +20,16 @@ public class StationServiceImpl implements StationService {
     @Autowired
     private VehicleRepository vehicleRepository;
     @Autowired
-    private UserServiceImpl userService;
+    private UserService userService;
 
     @Override
-    public List<Station> getStations() {
+    public List<Station> getStations(){
         return stationRepository.findAll();
     }
 
+    //Lưu ý nghiệp vụ
     @Override
-    public List<Station> getNearby(Double minLat, Double maxLat, Double minLng, Double maxLng) {
+    public List<Station> getNearby(Double minLat, Double maxLat, Double minLng, Double maxLng){
         return stationRepository.findByLatitudeBetweenAndLongitudeBetween(minLat, maxLat, minLng, maxLng);
     }
 
@@ -41,7 +42,7 @@ public class StationServiceImpl implements StationService {
         if (station.getAddress() == null || station.getAddress().trim().isEmpty()) {
             throw new RuntimeException("Station address is required");
         }
-        
+
         // Set default values
         if (station.getTotalSlots() == null) {
             station.setTotalSlots(10); // Default capacity
@@ -49,7 +50,7 @@ public class StationServiceImpl implements StationService {
         if (station.getAvailableSlots() == null) {
             station.setAvailableSlots(station.getTotalSlots());
         }
-        
+
         Station savedStation = stationRepository.save(station);
         userService.logAudit(null, "Created station " + savedStation.getStationId());
         return savedStation;
@@ -59,7 +60,7 @@ public class StationServiceImpl implements StationService {
     public Station updateStation(Integer stationId, Station stationUpdates) {
         Station existingStation = stationRepository.findById(stationId)
                 .orElseThrow(() -> new RuntimeException("Station not found"));
-        
+
         // Update allowed fields
         if (stationUpdates.getName() != null) {
             existingStation.setName(stationUpdates.getName());
@@ -85,7 +86,7 @@ public class StationServiceImpl implements StationService {
         if (stationUpdates.getLongitude() != null) {
             existingStation.setLongitude(stationUpdates.getLongitude());
         }
-        
+
         Station updatedStation = stationRepository.save(existingStation);
         userService.logAudit(null, "Updated station " + stationId);
         return updatedStation;
@@ -95,23 +96,22 @@ public class StationServiceImpl implements StationService {
     public Map<String, Object> deleteStation(Integer stationId) {
         Station station = stationRepository.findById(stationId)
                 .orElseThrow(() -> new RuntimeException("Station not found"));
-        
+
         // Check for active vehicles
         List<Vehicle> stationVehicles = vehicleRepository.findByStationStationId(stationId);
         if (!stationVehicles.isEmpty()) {
             throw new RuntimeException("Cannot delete station with active vehicles. Please transfer vehicles first.");
         }
-        
+
         // Check for active bookings (would need to implement this check)
         // For now, we'll allow deletion but log a warning
-        
+
         stationRepository.delete(station);
         userService.logAudit(null, "Deleted station " + stationId);
-        
+
         Map<String, Object> response = new HashMap<>();
         response.put("message", "Station deleted successfully");
         response.put("stationId", stationId);
         return response;
     }
 }
-

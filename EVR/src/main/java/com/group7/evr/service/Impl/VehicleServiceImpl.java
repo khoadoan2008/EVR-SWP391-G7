@@ -1,15 +1,10 @@
-package com.khoadoan.basic.demoswp.service.Impl;
+package com.group7.evr.service.Impl;
 
-import com.khoadoan.basic.demoswp.entity.IssueReport;
-import com.khoadoan.basic.demoswp.entity.Station;
-import com.khoadoan.basic.demoswp.entity.User;
-import com.khoadoan.basic.demoswp.entity.Vehicle;
-import com.khoadoan.basic.demoswp.repository.IssueReportRepository;
-import com.khoadoan.basic.demoswp.repository.StationRepository;
-import com.khoadoan.basic.demoswp.repository.UserRepository;
-import com.khoadoan.basic.demoswp.repository.VehicleRepository;
-
-import com.khoadoan.basic.demoswp.service.VehicleService;
+import com.group7.evr.entity.*;
+import com.group7.evr.enums.*;
+import com.group7.evr.repository.*;
+import com.group7.evr.service.UserService;
+import com.group7.evr.service.VehicleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,22 +25,20 @@ public class VehicleServiceImpl implements VehicleService {
     @Autowired
     private UserRepository userRepository;
     @Autowired
-    private StationRepository stationRepository;
-    @Autowired
     private IssueReportRepository issueReportRepository;
     @Autowired
-    private UserServiceImpl userService;
-    
+    private UserService userService;
+
     private final String uploadDir = "uploads/issues/";
 
     @Override
     public List<Vehicle> getAvailableVehicles(Integer stationId){
-        return vehicleRepository.findByStationStationIdAndStatus(stationId, "Available");
+        return vehicleRepository.findByStationStationIdAndStatus(stationId, VehicleStatus.AVAILABLE);
     }
 
     @Override
     public Vehicle getVehicle(Integer vehicleId) {
-        return vehicleRepository.getVehicleById(vehicleId);
+        return vehicleRepository.findByVehicleId(vehicleId);
     }
 
     @Override
@@ -70,16 +63,16 @@ public class VehicleServiceImpl implements VehicleService {
     }
 
     @Override
-    public Map<String, Object> reportVehicleIssue(Integer vehicleId, Integer userId, String issueCategory, 
-                                                 String priority, String description, MultipartFile[] photos) {
+    public Map<String, Object> reportVehicleIssue(Integer vehicleId, Integer userId, String issueCategory,
+                                                  String priority, String description, MultipartFile[] photos) {
         // Validate vehicle exists
         Vehicle vehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> new RuntimeException("Vehicle not found"));
-        
+
         // Validate user exists
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        
+
         // Validate issue category
         IssueCategory categoryEnum;
         try {
@@ -87,7 +80,7 @@ public class VehicleServiceImpl implements VehicleService {
         } catch (IllegalArgumentException e) {
             throw new RuntimeException("Invalid issue category. Must be: mechanical, electrical, cosmetic, safety");
         }
-        
+
         // Validate priority
         IssuePriority priorityEnum;
         try {
@@ -95,7 +88,7 @@ public class VehicleServiceImpl implements VehicleService {
         } catch (IllegalArgumentException e) {
             throw new RuntimeException("Invalid priority. Must be: low, medium, high, critical");
         }
-        
+
         // Create issue report
         IssueReport issueReport = new IssueReport();
         issueReport.setVehicle(vehicle);
@@ -105,7 +98,7 @@ public class VehicleServiceImpl implements VehicleService {
         issueReport.setPriority(priorityEnum);
         issueReport.setDescription(description);
         issueReport.setStatus(IssueStatus.OPEN);
-        
+
         // Handle photo uploads
         if (photos != null && photos.length > 0) {
             StringBuilder photoUrls = new StringBuilder();
@@ -122,16 +115,16 @@ public class VehicleServiceImpl implements VehicleService {
             }
             issueReport.setPhotos(photoUrls.toString());
         }
-        
+
         // Save issue report
         IssueReport savedReport = issueReportRepository.save(issueReport);
-        
+
         // Log audit
         userService.logAudit(user, "Reported vehicle issue " + savedReport.getIssueReportId() + " for vehicle " + vehicleId);
-        
+
         // Notify station staff (mock implementation)
         notifyStationStaff(vehicle.getStation(), savedReport);
-        
+
         // Prepare response
         Map<String, Object> response = new HashMap<>();
         response.put("issueReportId", savedReport.getIssueReportId());
@@ -140,23 +133,24 @@ public class VehicleServiceImpl implements VehicleService {
         response.put("category", issueCategory);
         response.put("reportedAt", savedReport.getReportedAt());
         response.put("message", "Issue has been reported and station staff will be notified");
-        
+
         return response;
     }
+
 
     private String saveFile(MultipartFile file) throws IOException {
         Path path = Paths.get(uploadDir + file.getOriginalFilename());
         Files.write(path, file.getBytes());
         return path.toString();
     }
-    
+
     private void notifyStationStaff(Station station, IssueReport issueReport) {
         // Mock notification - in production, this would send email/SMS to station staff
-        System.out.println("NOTIFICATION: New issue reported for vehicle " + issueReport.getVehicle().getVehicleId() + 
-                          " at station " + station.getName() + 
-                          " - Priority: " + issueReport.getPriority() + 
-                          " - Category: " + issueReport.getIssueCategory());
-        
+        System.out.println("NOTIFICATION: New issue reported for vehicle " + issueReport.getVehicle().getVehicleId() +
+                " at station " + station.getName() +
+                " - Priority: " + issueReport.getPriority() +
+                " - Category: " + issueReport.getIssueCategory());
+
         // Log notification attempt
         userService.logAudit(null, "Notification sent to station staff for issue " + issueReport.getIssueReportId());
     }
@@ -168,13 +162,13 @@ public class VehicleServiceImpl implements VehicleService {
         if (vehicle.getPlateNumber() == null || vehicle.getPlateNumber().trim().isEmpty()) {
             throw new RuntimeException("Plate number is required");
         }
-        
+
         // Check for duplicate plate number
         if (vehicleRepository.findAll().stream()
                 .anyMatch(v -> v.getPlateNumber().equals(vehicle.getPlateNumber()))) {
             throw new RuntimeException("Vehicle with this plate number already exists");
         }
-        
+
         // Set default values
         if (vehicle.getStatus() == null) {
             vehicle.setStatus(VehicleStatus.AVAILABLE);
@@ -185,7 +179,7 @@ public class VehicleServiceImpl implements VehicleService {
         if (vehicle.getMileage() == null) {
             vehicle.setMileage(java.math.BigDecimal.ZERO);
         }
-        
+
         Vehicle savedVehicle = vehicleRepository.save(vehicle);
         userService.logAudit(null, "Created vehicle " + savedVehicle.getVehicleId());
         return savedVehicle;
@@ -195,7 +189,7 @@ public class VehicleServiceImpl implements VehicleService {
     public Vehicle updateVehicle(Integer vehicleId, Vehicle vehicleUpdates) {
         Vehicle existingVehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> new RuntimeException("Vehicle not found"));
-        
+
         // Update allowed fields
         if (vehicleUpdates.getPlateNumber() != null) {
             // Check for duplicate plate number (excluding current vehicle)
@@ -217,7 +211,7 @@ public class VehicleServiceImpl implements VehicleService {
         if (vehicleUpdates.getLastMaintenanceDate() != null) {
             existingVehicle.setLastMaintenanceDate(vehicleUpdates.getLastMaintenanceDate());
         }
-        
+
         Vehicle updatedVehicle = vehicleRepository.save(existingVehicle);
         userService.logAudit(null, "Updated vehicle " + vehicleId);
         return updatedVehicle;
@@ -227,19 +221,19 @@ public class VehicleServiceImpl implements VehicleService {
     public Map<String, Object> deleteVehicle(Integer vehicleId) {
         Vehicle vehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> new RuntimeException("Vehicle not found"));
-        
+
         // Check for active bookings
         // Note: This would need to be implemented with proper booking status checks
         if (!VehicleStatus.AVAILABLE.equals(vehicle.getStatus())) {
             throw new RuntimeException("Cannot delete vehicle with active bookings or maintenance");
         }
-        
+
         // Soft delete by setting status to 'Maintenance' (since we don't have a DELETED status)
         vehicle.setStatus(VehicleStatus.MAINTENANCE);
         vehicleRepository.save(vehicle);
-        
+
         userService.logAudit(null, "Deleted vehicle " + vehicleId);
-        
+
         Map<String, Object> response = new HashMap<>();
         response.put("message", "Vehicle deleted successfully");
         response.put("vehicleId", vehicleId);

@@ -1,8 +1,11 @@
-package com.khoadoan.basic.demoswp.service.Impl;
+package com.group7.evr.service.Impl;
 
-import com.khoadoan.basic.demoswp.entity.*;
-import com.khoadoan.basic.demoswp.repository.*;
-import com.khoadoan.basic.demoswp.service.AdminService;
+import com.group7.evr.entity.*;
+import com.group7.evr.enums.UserRole;
+import com.group7.evr.enums.VehicleStatus;
+import com.group7.evr.repository.*;
+import com.group7.evr.service.AdminService;
+import com.group7.evr.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -23,28 +26,30 @@ public class AdminServiceImpl implements AdminService {
     @Autowired
     private UserRepository userRepository;
     @Autowired
+    private PaymentRepository paymentRepository;
+    @Autowired
     private RiskFlagRepository riskFlagRepository;
     @Autowired
     private StaffScheduleRepository staffScheduleRepository;
     @Autowired
     private ComplaintRepository complaintRepository;
     @Autowired
-    private UserServiceImpl userService;
+    private UserService userService;
 
     // Fleet monitoring by station
     @Override
     public Map<String, Object> getFleetSummary(Integer stationId) {
-        List<Vehicle> vehicles = vehicleRepository.findByStationStationIdAndStatus(stationId, "Available");
-        List<Vehicle> rentedVehicles = vehicleRepository.findByStationStationIdAndStatus(stationId, "Rented");
-        List<Vehicle> maintenanceVehicles = vehicleRepository.findByStationStationIdAndStatus(stationId, "Maintenance");
-        
+        List<Vehicle> vehicles = vehicleRepository.findByStationStationIdAndStatus(stationId, VehicleStatus.AVAILABLE);
+        List<Vehicle> rentedVehicles = vehicleRepository.findByStationStationIdAndStatus(stationId, VehicleStatus.RENTED);
+        List<Vehicle> maintenanceVehicles = vehicleRepository.findByStationStationIdAndStatus(stationId, VehicleStatus.MAINTENANCE);
+
         Map<String, Object> summary = new HashMap<>();
         summary.put("totalVehicles", vehicles.size() + rentedVehicles.size() + maintenanceVehicles.size());
         summary.put("availableVehicles", vehicles.size());
         summary.put("rentedVehicles", rentedVehicles.size());
         summary.put("maintenanceVehicles", maintenanceVehicles.size());
         summary.put("occupancyRate", calculateOccupancyRate(vehicles.size(), rentedVehicles.size()));
-        
+
         return summary;
     }
 
@@ -53,11 +58,11 @@ public class AdminServiceImpl implements AdminService {
     public Vehicle dispatchVehicle(Integer fromStationId, Integer toStationId, Integer vehicleId) {
         Vehicle vehicle = vehicleRepository.findById(vehicleId).orElseThrow();
         Station targetStation = stationRepository.findById(toStationId).orElseThrow();
-        
+
         if (!vehicle.getStation().getStationId().equals(fromStationId)) {
             throw new RuntimeException("Vehicle not at source station");
         }
-        
+
         vehicle.setStation(targetStation);
         Vehicle updatedVehicle = vehicleRepository.save(vehicle);
         userService.logAudit(null, "Dispatched vehicle " + vehicleId + " from station " + fromStationId + " to " + toStationId);
@@ -68,7 +73,7 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public List<User> getCustomersWithRiskFlags() {
         return userRepository.findAll().stream()
-                .filter(user -> "Customer".equals(user.getRole()))
+                .filter(user -> UserRole.CUSTOMER.equals(user.getRole()))
                 .filter(user -> riskFlagRepository.findByUserUserId(user.getUserId()).size() > 0)
                 .toList();
     }
@@ -77,13 +82,13 @@ public class AdminServiceImpl implements AdminService {
     public RiskFlag flagCustomer(Integer customerId, Integer adminId, String reason, Integer riskScore) {
         User customer = userRepository.findById(customerId).orElseThrow();
         User admin = userRepository.findById(adminId).orElseThrow();
-        
+
         RiskFlag riskFlag = new RiskFlag();
         riskFlag.setUser(customer);
         riskFlag.setFlaggedBy(admin);
         riskFlag.setReason(reason);
         riskFlag.setRiskScore(riskScore);
-        
+
         RiskFlag savedFlag = riskFlagRepository.save(riskFlag);
         userService.logAudit(admin, "Flagged customer " + customerId + " with risk score " + riskScore);
         return savedFlag;
@@ -98,8 +103,10 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public List<User> getStaffByStation(Integer stationId) {
         return userRepository.findAll().stream()
-                .filter(user -> "Staff".equals(user.getRole()))
-                .filter(user -> user.getStation() != null && user.getStation().getStationId().equals(stationId))
+                .filter(user -> UserRole.STAFF.equals(user.getRole())) // SỬA: DÙNG ENUM
+                .filter(user -> stationId == null ||
+                        (user.getStation() != null &&
+                                user.getStation().getStationId().equals(stationId)))
                 .toList();
     }
 
@@ -107,13 +114,13 @@ public class AdminServiceImpl implements AdminService {
     public Map<String, Object> getStaffPerformance(Integer staffId) {
         User staff = userRepository.findById(staffId).orElseThrow();
         List<Booking> handovers = bookingRepository.findByStaffUserId(staffId);
-        
+
         Map<String, Object> performance = new HashMap<>();
         performance.put("totalHandovers", handovers.size());
         performance.put("station", staff.getStation().getName());
         performance.put("averageRating", calculateAverageRating(staffId)); // Mock calculation
         performance.put("lastActivity", getLastActivity(staffId));
-        
+
         return performance;
     }
 
@@ -122,14 +129,14 @@ public class AdminServiceImpl implements AdminService {
                                              LocalDateTime shiftEnd, String shiftType) {
         User staff = userRepository.findById(staffId).orElseThrow();
         Station station = stationRepository.findById(stationId).orElseThrow();
-        
+
         StaffSchedule schedule = new StaffSchedule();
         schedule.setStaff(staff);
         schedule.setStation(station);
         schedule.setShiftStart(shiftStart);
         schedule.setShiftEnd(shiftEnd);
         schedule.setShiftType(shiftType);
-        
+
         StaffSchedule savedSchedule = staffScheduleRepository.save(schedule);
         userService.logAudit(null, "Created schedule for staff " + staffId);
         return savedSchedule;
@@ -142,44 +149,44 @@ public class AdminServiceImpl implements AdminService {
         BigDecimal totalRevenue = bookings.stream()
                 .map(Booking::getTotalPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
+
         Map<String, Object> report = new HashMap<>();
         report.put("totalRevenue", totalRevenue);
         report.put("totalBookings", bookings.size());
-        report.put("averageBookingValue", bookings.isEmpty() ? BigDecimal.ZERO : 
+        report.put("averageBookingValue", bookings.isEmpty() ? BigDecimal.ZERO :
                 totalRevenue.divide(BigDecimal.valueOf(bookings.size())));
-        
+
         return report;
     }
 
     @Override
     public Map<String, Object> getUtilizationReport(Integer stationId) {
-        List<Vehicle> vehicles = vehicleRepository.findByStationStationIdAndStatus(stationId, "Available");
-        List<Vehicle> rentedVehicles = vehicleRepository.findByStationStationIdAndStatus(stationId, "Rented");
-        
+        List<Vehicle> vehicles = vehicleRepository.findByStationStationIdAndStatus(stationId, VehicleStatus.AVAILABLE);
+        List<Vehicle> rentedVehicles = vehicleRepository.findByStationStationIdAndStatus(stationId, VehicleStatus.RENTED);
+
         Map<String, Object> utilization = new HashMap<>();
         utilization.put("totalVehicles", vehicles.size() + rentedVehicles.size());
         utilization.put("utilizedVehicles", rentedVehicles.size());
         utilization.put("utilizationRate", calculateUtilizationRate(vehicles.size(), rentedVehicles.size()));
-        
+
         return utilization;
     }
 
     @Override
     public Map<String, Object> getPeakHoursAnalysis(Integer stationId) {
         List<Booking> bookings = bookingRepository.findByStationStationId(stationId);
-        
+
         Map<String, Long> hourlyDistribution = bookings.stream()
                 .collect(java.util.stream.Collectors.groupingBy(
-                    booking -> String.valueOf(booking.getStartTime().getHours()),
-                    java.util.stream.Collectors.counting()
+                        booking -> String.valueOf(booking.getStartTime().getHours()),
+                        java.util.stream.Collectors.counting()
                 ));
-        
+
         Map<String, Object> analysis = new HashMap<>();
         analysis.put("hourlyDistribution", hourlyDistribution);
         analysis.put("peakHour", findPeakHour(hourlyDistribution));
         analysis.put("totalBookings", bookings.size());
-        
+
         return analysis;
     }
 
