@@ -1,6 +1,7 @@
 package com.group7.evr.entity;
 
 import com.group7.evr.enums.BookingStatus;
+import com.group7.evr.enums.converter.BookingStatusConverter;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -29,8 +30,8 @@ public class Booking {
     private Date startTime;
     private Date endTime;
     private BigDecimal totalPrice;
-    
-    @Enumerated(EnumType.STRING)
+
     @Column(name = "BookingStatus")
+    @Convert(converter = BookingStatusConverter.class)
     private BookingStatus bookingStatus = BookingStatus.PENDING;
 }

@@ -21,8 +21,10 @@ public class RiskFlag {
     @JoinColumn(name = "FlaggedBy")
     private User flaggedBy;
 
+    @Column(columnDefinition = "NVARCHAR(255)")
     private String reason;
     private Integer riskScore; // 1-10 scale
+    @Column(columnDefinition = "NVARCHAR(255)")
     private String status = "Active"; // Active, Resolved, Dismissed
     private LocalDateTime flaggedAt = LocalDateTime.now();
     private LocalDateTime resolvedAt;

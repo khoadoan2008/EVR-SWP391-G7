@@ -1,6 +1,7 @@
 package com.group7.evr.enums;
 
 public enum UserStatus {
+    PENDING_VERIFICATION("Pending Verification"),
     ACTIVE("Active"),
     SUSPENDED("Suspended"),
     DELETED("Deleted");
