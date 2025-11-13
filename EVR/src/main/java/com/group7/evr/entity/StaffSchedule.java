@@ -23,7 +23,10 @@ public class StaffSchedule {
 
     private LocalDateTime shiftStart;
     private LocalDateTime shiftEnd;
+    @Column(columnDefinition = "NVARCHAR(255)")
     private String shiftType; // Morning, Afternoon, Evening, Night
+    @Column(columnDefinition = "NVARCHAR(255)")
     private String status = "Scheduled"; // Scheduled, Active, Completed, Cancelled
+    @Column(columnDefinition = "NVARCHAR(255)")
     private String notes;
 }

@@ -34,14 +34,18 @@ public class IssueReport {
     @Enumerated(EnumType.STRING)
     private IssuePriority priority;
     
+    @Column(columnDefinition = "NVARCHAR(255)")
     private String description;
+    @Column(columnDefinition = "NVARCHAR(255)")
     private String photos; // JSON array of photo URLs
     
     @Enumerated(EnumType.STRING)
     private IssueStatus status = IssueStatus.OPEN;
     private LocalDateTime reportedAt = LocalDateTime.now();
     private LocalDateTime resolvedAt;
+    @Column(columnDefinition = "NVARCHAR(255)")
     private String resolutionNotes;
+    @Column(columnDefinition = "NVARCHAR(255)")
     private String assignedTo; // Staff member assigned to resolve
 }
 

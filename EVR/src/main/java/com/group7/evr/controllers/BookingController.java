@@ -2,11 +2,11 @@ package com.group7.evr.controllers;
 
 import com.group7.evr.entity.Booking;
 import com.group7.evr.entity.User;
-import com.group7.evr.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.group7.evr.service.BookingService;
+import com.group7.evr.service.UserService;
 
 import java.util.List;
 import java.util.Map;
@@ -55,6 +55,16 @@ public class BookingController {
 
         User user = userService.getUserById(userId);
         return ResponseEntity.ok(bookingService.returnVehicle(id, user, staff));
+    }
+
+    @GetMapping("/staff/bookings/checkin-queue")
+    public ResponseEntity<List<Booking>> getCheckInQueue(@RequestParam Integer staffId) {
+        return ResponseEntity.ok(bookingService.getCheckInQueue(staffId));
+    }
+
+    @GetMapping("/staff/bookings/return-queue")
+    public ResponseEntity<List<Booking>> getReturnQueue(@RequestParam Integer staffId) {
+        return ResponseEntity.ok(bookingService.getReturnQueue(staffId));
     }
 
     // 5a. History
@@ -120,7 +130,7 @@ public class BookingController {
     public ResponseEntity<String> uploadReturnInspection(
             @PathVariable Integer id,
             @RequestParam Integer userId) {
-        User actor = userService.getUserById(userId);
+        userService.getUserById(userId);
         // TODO: implement with file uploads & checklist
         return ResponseEntity.ok("Return inspection received for booking " + id);
     }

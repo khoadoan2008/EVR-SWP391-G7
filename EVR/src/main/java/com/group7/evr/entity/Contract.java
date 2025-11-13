@@ -1,6 +1,7 @@
 package com.group7.evr.entity;
 
 import com.group7.evr.enums.ContractStatus;
+import com.group7.evr.enums.converter.ContractStatusConverter;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -16,10 +17,12 @@ public class Contract {
     @ManyToOne
     @JoinColumn(name = "BookingID")
     private Booking booking;
+    @Column(columnDefinition = "NVARCHAR(255)")
     private String renterSignature;
+    @Column(columnDefinition = "NVARCHAR(255)")
     private String staffSignature;
     private LocalDateTime signedAt = LocalDateTime.now();
     
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = ContractStatusConverter.class)
     private ContractStatus status = ContractStatus.ACTIVE;
 }

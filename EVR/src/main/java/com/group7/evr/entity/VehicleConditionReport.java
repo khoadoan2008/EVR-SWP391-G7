@@ -25,7 +25,9 @@ public class VehicleConditionReport {
     private User staff;
     private LocalDateTime reportTime = LocalDateTime.now();
     private BigDecimal battery;
+    @Column(columnDefinition = "NVARCHAR(255)")
     private String damageDescription;
+    @Column(columnDefinition = "NVARCHAR(255)")
     private String photos; // JSON array of photo URLs
     
     @Enumerated(EnumType.STRING)
