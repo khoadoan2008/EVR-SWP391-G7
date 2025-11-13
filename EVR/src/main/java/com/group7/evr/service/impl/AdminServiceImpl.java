@@ -26,8 +26,6 @@ public class AdminServiceImpl implements AdminService {
     @Autowired
     private UserRepository userRepository;
     @Autowired
-    private PaymentRepository paymentRepository;
-    @Autowired
     private RiskFlagRepository riskFlagRepository;
     @Autowired
     private StaffScheduleRepository staffScheduleRepository;
