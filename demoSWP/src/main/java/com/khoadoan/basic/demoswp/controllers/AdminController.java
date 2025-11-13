@@ -1,7 +1,7 @@
 package com.khoadoan.basic.demoswp.controllers;
 
-import com.group7.evr.entity.*;
-import com.group7.evr.service.AdminService;
+import com.khoadoan.basic.demoswp.entity.*;
+import com.khoadoan.basic.demoswp.service.AdminService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -91,7 +91,7 @@ public class AdminController {
             @RequestParam(required = false) String to) {
         LocalDateTime fromDate = from != null ? LocalDateTime.parse(from) : LocalDateTime.now().minusMonths(1);
         LocalDateTime toDate = to != null ? LocalDateTime.parse(to) : LocalDateTime.now();
-        
+
         if (stationId == null) {
             stationId = 1; // Default station
         }

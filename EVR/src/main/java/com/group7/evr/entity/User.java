@@ -2,6 +2,8 @@ package com.group7.evr.entity;
 
 import com.group7.evr.enums.UserRole;
 import com.group7.evr.enums.UserStatus;
+import com.group7.evr.enums.converter.UserRoleConverter;
+import com.group7.evr.enums.converter.UserStatusConverter;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -17,40 +19,52 @@ public class User {
     @Column(name = "UserID")
     private Integer userId;
 
-    @Column(name = "Name")
+    @Column(name = "Name", columnDefinition = "NVARCHAR(255)")
     private String name;
 
     @Column(name = "DateOfBirth")
     private Date dateOfBirth;
 
-    @Column(name = "Email")
+    @Column(name = "Email", columnDefinition = "NVARCHAR(255)")
     private String email;
 
-    @Column(name = "Phone")
+    @Column(name = "Phone", columnDefinition = "NVARCHAR(255)")
     private String phone;
 
-    @Column(name = "PasswordHash")
+    @Column(name = "PasswordHash", columnDefinition = "NVARCHAR(255)")
     private String passwordHash;
 
-    @Column(name = "Address")
+    @Column(name = "Address", columnDefinition = "NVARCHAR(255)")
     private String address;
 
-    @Column(name = "PersonalIdImage")
+    @Column(name = "PersonalIdImage", columnDefinition = "NVARCHAR(255)")
     private String personalIdImage;
 
-    @Column(name = "LicenseImage")
+    @Column(name = "LicenseImage", columnDefinition = "NVARCHAR(255)")
     private String licenseImage;
 
     @Column(name = "CreatedAt")
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "Role")
+    @Convert(converter = UserRoleConverter.class)
     private UserRole role;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "Status")
-    private UserStatus status = UserStatus.ACTIVE;
+    @Convert(converter = UserStatusConverter.class)
+    private UserStatus status = UserStatus.PENDING_VERIFICATION;
+
+    @Column(name = "EmailVerified")
+    private Boolean emailVerified = Boolean.FALSE;
+
+    @Column(name = "VerifiedAt")
+    private LocalDateTime verifiedAt;
+
+    @Column(name = "VerificationToken", columnDefinition = "NVARCHAR(255)")
+    private String verificationToken;
+
+    @Column(name = "VerificationTokenExpiry")
+    private LocalDateTime verificationTokenExpiry;
 
     // ⚠️ Đây là phần gây lỗi — phải map đúng tên foreign key trong bảng Users
     @ManyToOne

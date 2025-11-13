@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -21,8 +20,7 @@ public class VehicleService {
     private VehicleRepository vehicleRepository;
     @Autowired
     private UserRepository userRepository;
-    @Autowired
-    private StationRepository stationRepository;
+    // StationRepository not used here; keep DI lean
     @Autowired
     private IssueReportRepository issueReportRepository;
     @Autowired

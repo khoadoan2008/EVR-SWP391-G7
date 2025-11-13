@@ -1,58 +1,120 @@
 package com.group7.evr.service;
 
+import com.group7.evr.dto.UserRegistrationRequest;
 import com.group7.evr.entity.AuditLog;
 import com.group7.evr.entity.User;
 import com.group7.evr.enums.UserRole;
 import com.group7.evr.enums.UserStatus;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 import com.group7.evr.repository.AuditLogRepository;
 import com.group7.evr.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.Date;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
+@Slf4j
 public class UserService {
-    @Autowired
-    private UserRepository userRepository;
-    @Autowired
-    private AuditLogRepository auditLogRepository;
-    private final String uploadDir = "uploads/";
+    private final UserRepository userRepository;
+    private final AuditLogRepository auditLogRepository;
+    private final EmailService emailService;
+    private final PasswordEncoder passwordEncoder;
 
-    /**
-     * REGISTER NEW CUSTOMER
-     * - Creates customer account with CUSTOMER role
-     * - Uploads ID card and driver license images
-     * - Logs registration audit trail
-     */
-    public User register(User user, MultipartFile personalIdImage, MultipartFile licenseImage) throws IOException {
+    private final Path uploadDir = Paths.get("uploads");
+
+    @Value("${app.auth.verification-url:http://localhost:8080/api/users/verify-email}")
+    private String verificationEndpoint;
+
+    @Transactional
+    public User register(UserRegistrationRequest request,
+                         MultipartFile personalIdImage,
+                         MultipartFile licenseImage) throws IOException {
+        if (userRepository.findByEmail(request.getEmail()) != null) {
+            throw new RuntimeException("Email already exists");
+        }
+
+        User user = new User();
         user.setRole(UserRole.CUSTOMER);
-        if (personalIdImage != null) {
-            String fileName = saveFile(personalIdImage);
-            user.setPersonalIdImage(fileName);
+        user.setStatus(UserStatus.PENDING_VERIFICATION);
+        user.setName(request.getName());
+        user.setEmail(request.getEmail());
+        user.setPhone(request.getPhone());
+        user.setAddress(request.getAddress());
+        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        user.setEmailVerified(Boolean.FALSE);
+        user.setVerificationToken(UUID.randomUUID().toString());
+        user.setVerificationTokenExpiry(LocalDateTime.now().plus(24, ChronoUnit.HOURS));
+        if (request.getDateOfBirth() != null) {
+            user.setDateOfBirth(Date.valueOf(request.getDateOfBirth()));
         }
-        if (licenseImage != null) {
-            String fileName = saveFile(licenseImage);
-            user.setLicenseImage(fileName);
+
+        if (personalIdImage != null && !personalIdImage.isEmpty()) {
+            String personalIdPath = saveFile(personalIdImage);
+            user.setPersonalIdImage(personalIdPath);
         }
+        if (licenseImage != null && !licenseImage.isEmpty()) {
+            String licensePath = saveFile(licenseImage);
+            user.setLicenseImage(licensePath);
+        }
+
         User savedUser = userRepository.save(user);
         logAudit(savedUser, "Registered user " + savedUser.getUserId());
-        return savedUser;
+
+        String verificationLink = UriComponentsBuilder
+                .fromUriString(verificationEndpoint)
+                .queryParam("token", savedUser.getVerificationToken())
+                .build()
+                .toUriString();
+
+        emailService.sendRegistrationConfirmation(savedUser, verificationLink);
+        return sanitizeUserData(savedUser);
     }
 
-    /**
-     * VERIFY USER ACCOUNT (by staff)
-     * - Activates user account by setting status to ACTIVE
-     * - Typically called after document verification by staff
-     */
+    public User verifyEmailToken(String token) {
+        if (!StringUtils.hasText(token)) {
+            throw new RuntimeException("Invalid verification token");
+        }
+
+        User user = userRepository.findByVerificationToken(token);
+        if (user == null) {
+            throw new RuntimeException("Verification token is invalid or has already been used");
+        }
+
+        if (user.getVerificationTokenExpiry() != null && user.getVerificationTokenExpiry().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("Verification token has expired");
+        }
+
+        user.setEmailVerified(Boolean.TRUE);
+        user.setVerifiedAt(LocalDateTime.now());
+        user.setVerificationToken(null);
+        user.setVerificationTokenExpiry(null);
+        user.setStatus(UserStatus.ACTIVE);
+
+        User saved = userRepository.save(user);
+        logAudit(saved, "User verified email");
+        return saved;
+    }
+
     public User verifyUser(Integer userId, User staff) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -61,22 +123,15 @@ public class UserService {
         return userRepository.save(user);
     }
 
-    /**
-     * SAVE UPLOADED FILE TO SERVER
-     * - Stores file in uploads/ directory
-     * - Returns the saved file path
-     */
     private String saveFile(MultipartFile file) throws IOException {
-        Path path =  Paths.get(uploadDir + file.getOriginalFilename());
+        Files.createDirectories(uploadDir);
+        String originalName = StringUtils.cleanPath(Objects.requireNonNullElse(file.getOriginalFilename(), "document"));
+        String fileName = UUID.randomUUID() + "_" + originalName;
+        Path path = uploadDir.resolve(fileName);
         Files.write(path, file.getBytes());
         return path.toString();
     }
 
-    /**
-     * LOG USER ACTION FOR AUDIT TRAIL
-     * - Tracks all important system operations
-     * - Used for security monitoring and troubleshooting
-     */
     public void logAudit(User user, String action) {
         AuditLog log = new AuditLog();
         log.setUser(user);
@@ -84,34 +139,26 @@ public class UserService {
         log.setTimestamp(LocalDateTime.now());
         auditLogRepository.save(log);
     }
-    /**
-     * GET USER BY ID
-     * - Retrieves user from database
-     * - Throws exception if user not found
-     */
-    public User getUserById(Integer userId) {
+public User getUserById(Integer userId) {
         return userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
-    }
+}
 
-
-    /**
-     * USER LOGIN AUTHENTICATION
-     * - Validates email and password
-     * - Verifies account is ACTIVE status
-     * - Generates JWT token (mock) and returns sanitized user data
-     */
+    // --- New: Login functionality ---
     public Map<String, Object> login(String email, String password) {
         User user = userRepository.findByEmail(email);
         if (user == null) {
             throw new RuntimeException("Invalid email or password");
         }
         
-        // Simple password validation (in production, use proper password hashing)
-        if (!password.equals(user.getPasswordHash())) {
+        if (user.getPasswordHash() == null || !passwordEncoder.matches(password, user.getPasswordHash())) {
             throw new RuntimeException("Invalid email or password");
         }
         
-        if (!UserStatus.ACTIVE.equals(user.getStatus())) {
+        if (!Boolean.TRUE.equals(user.getEmailVerified()) || UserStatus.PENDING_VERIFICATION.equals(user.getStatus())) {
+            throw new RuntimeException("Tài khoản chưa được xác thực. Vui lòng kiểm tra email của bạn.");
+        }
+
+        if (UserStatus.SUSPENDED.equals(user.getStatus()) || UserStatus.DELETED.equals(user.getStatus())) {
             throw new RuntimeException("Account is not active");
         }
         
@@ -127,11 +174,7 @@ public class UserService {
         return response;
     }
 
-    /**
-     * UPDATE USER PROFILE INFORMATION
-     * - Allows updating only safe fields: name, phone, address, email
-     * - Prevents modification of role, status, password
-     */
+    // --- New: Update user functionality ---
     public User updateUser(Integer userId, User userUpdates) {
         User existingUser = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -155,11 +198,29 @@ public class UserService {
         return updatedUser;
     }
 
-    /**
-     * SANITIZE USER DATA FOR API RESPONSES
-     * - Removes sensitive information: password, documents
-     * - Returns only necessary fields for client
-     */
+    public void changePassword(Integer userId, String currentPassword, String newPassword) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (currentPassword == null || currentPassword.isBlank()) {
+            throw new RuntimeException("Current password is required");
+        }
+        if (newPassword == null || newPassword.isBlank()) {
+            throw new RuntimeException("New password is required");
+        }
+        if (user.getPasswordHash() == null || !passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            throw new RuntimeException("Current password is incorrect");
+        }
+        if (newPassword.length() < 6) {
+            throw new RuntimeException("New password must be at least 6 characters");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        logAudit(user, "Updated user password");
+    }
+
+    // --- Helper: Sanitize user data for API responses ---
     private User sanitizeUserData(User user) {
         User sanitized = new User();
         sanitized.setUserId(user.getUserId());
@@ -170,16 +231,13 @@ public class UserService {
         sanitized.setRole(user.getRole());
         sanitized.setStatus(user.getStatus());
         sanitized.setCreatedAt(user.getCreatedAt());
+        sanitized.setEmailVerified(user.getEmailVerified());
+        sanitized.setVerifiedAt(user.getVerifiedAt());
         // Don't include password hash, personal documents, etc.
         return sanitized;
     }
 
-    /**
-     * GET ALL USERS WITH FILTERING AND PAGINATION (Admin function)
-     * - Supports filtering by role and status
-     * - Implements pagination for large datasets
-     * - Returns metadata: totalCount, totalPages
-     */
+    // --- Admin: Customer management ---
     public Map<String, Object> getAllUsers(int page, int size, String role, String status) {
         List<User> allUsers = userRepository.findAll();
         
@@ -204,11 +262,6 @@ public class UserService {
         return response;
     }
 
-    /**
-     * GET CUSTOMERS WITH RISK INDICATORS
-     * - Currently: returns customers with status != ACTIVE
-     * - Future: can integrate with risk flag system
-     */
     public List<User> getRiskUsers() {
         return userRepository.findAll().stream()
                 .filter(user -> UserRole.CUSTOMER.equals(user.getRole()))
@@ -220,20 +273,15 @@ public class UserService {
                 .toList();
     }
 
-    /**
-     * UPDATE USER STATUS (Admin function)
-     * - Allowed statuses: Active, Suspended, Banned
-     * - Logs audit trail with reason for status change
-     */
     public User updateUserStatus(Integer userId, String status, String reason) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         
         // Validate status
         if (!isValidStatus(status)) {
-            throw new RuntimeException("Invalid status. Must be: Active, Suspended, Deleted");
+            throw new RuntimeException("Invalid status. Must be: Active, Suspended, Banned");
         }
-
+        
         String oldStatus = user.getStatus().toString();
         user.setStatus(UserStatus.valueOf(status.toUpperCase()));
         User updatedUser = userRepository.save(user);
@@ -244,22 +292,16 @@ public class UserService {
         return updatedUser;
     }
 
-    /**
-     * VALIDATE USER STATUS STRING
-     *
-     */
     private boolean isValidStatus(String status) {
-        // K có status BANNED trong enum
-//        return status != null && (status.equals("Active") || status.equals("Suspended") || status.equals("Banned"));
-        return status != null && (status.equals("Active") || status.equals("Suspended") || status.equals("Deleted"));
+        if (status == null) {
+            return false;
+        }
+        return Arrays.stream(UserStatus.values())
+                .anyMatch(userStatus -> userStatus.name().equalsIgnoreCase(status)
+                        || userStatus.getValue().equalsIgnoreCase(status));
     }
 
-    /**
-     * CREATE NEW STAFF ACCOUNT (Admin function)
-     * - Sets default role: STAFF
-     * - Requires station assignment
-     * - Generates default password if not provided
-     */
+    // --- Admin: Staff management ---
     public User createStaff(User staff) {
         // Validate required fields
         if (staff.getName() == null || staff.getName().trim().isEmpty()) {
@@ -275,21 +317,19 @@ public class UserService {
         // Set staff-specific defaults
         staff.setRole(UserRole.STAFF);
         staff.setStatus(UserStatus.ACTIVE);
-        if (staff.getPasswordHash() == null) {
-            // Generate default password (in production, send via email)
-            staff.setPasswordHash("default_password_" + System.currentTimeMillis());
+        String rawPassword = staff.getPasswordHash();
+        if (!StringUtils.hasText(rawPassword)) {
+            rawPassword = "default_password_" + System.currentTimeMillis();
         }
+        staff.setPasswordHash(passwordEncoder.encode(rawPassword));
+        staff.setEmailVerified(Boolean.TRUE);
+        staff.setVerifiedAt(LocalDateTime.now());
         
         User savedStaff = userRepository.save(staff);
         logAudit(savedStaff, "Created staff " + savedStaff.getUserId());
         return savedStaff;
     }
 
-    /**
-     * GET STAFF LIST
-     * - Can filter by stationId
-     * - If stationId = null → returns all staff
-     */
     public List<User> getStaff(Integer stationId) {
         List<User> allUsers = userRepository.findAll();
         
@@ -299,11 +339,15 @@ public class UserService {
                 .toList();
     }
 
-    /**
-     * UPDATE STAFF INFORMATION
-     * - Allows updating permitted fields only
-     * - Validates: user must have STAFF role
-     */
+    public User getPrimaryStaffForStation(Integer stationId) {
+        if (stationId == null) {
+            throw new RuntimeException("Station ID is required to resolve staff");
+        }
+        return getStaff(stationId).stream()
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("No staff assigned to station " + stationId));
+    }
+
     public User updateStaff(Integer staffId, User staffUpdates) {
         User existingStaff = userRepository.findById(staffId)
                 .orElseThrow(() -> new RuntimeException("Staff not found"));
@@ -334,12 +378,6 @@ public class UserService {
         return updatedStaff;
     }
 
-    /**
-     * DELETE STAFF ACCOUNT (Soft delete)
-     * - Sets status to DELETED instead of database removal
-     * - Validates: user must have STAFF role
-     * - Future: should check for active bookings before deletion
-     */
     public Map<String, Object> deleteStaff(Integer staffId) {
         User staff = userRepository.findById(staffId)
                 .orElseThrow(() -> new RuntimeException("Staff not found"));

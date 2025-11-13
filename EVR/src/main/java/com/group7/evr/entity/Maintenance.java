@@ -1,6 +1,7 @@
 package com.group7.evr.entity;
 
 import com.group7.evr.enums.MaintenanceStatus;
+import com.group7.evr.enums.converter.MaintenanceStatusConverter;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -26,13 +27,15 @@ public class Maintenance {
     @JoinColumn(name = "StaffID")
     private User staff;
 
+    @Column(columnDefinition = "NVARCHAR(255)")
     private String issueDescription;
     
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = MaintenanceStatusConverter.class)
     private MaintenanceStatus status;
 
     private LocalDateTime scheduledAt;
     private LocalDateTime closedAt;
 
+    @Column(columnDefinition = "NVARCHAR(255)")
     private String remarks;
 }

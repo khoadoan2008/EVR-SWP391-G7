@@ -38,7 +38,6 @@ public class StationStaffService {
     @Autowired
     private MaintenanceRepository maintenanceRepository;
     private final String uploadDir = "uploads/reports/"; // Configure properly (e.g., use S3 in production)
-
     // a. View vehicles by status (available, rented, booked)
     public List<Vehicle> getVehiclesByStatus(Integer staffId, String status) {
         User staff = userRepository.findById(staffId)
@@ -266,7 +265,7 @@ public class StationStaffService {
         if (!m.getStation().getStationId().equals(staff.getStation().getStationId())) {
             throw new RuntimeException("Unauthorized station");
         }
-        m.setStatus(MaintenanceStatus.valueOf(status.toUpperCase()));
+        m.setStatus(MaintenanceStatus.fromString(status));
         m.setRemarks(remarks);
         if (MaintenanceStatus.CLOSED.equals(m.getStatus())) {
             m.setClosedAt(LocalDateTime.now());
@@ -278,8 +277,8 @@ public class StationStaffService {
 
     public List<Maintenance> listMaintenance(Integer staffId, String status) {
         User staff = userRepository.findById(staffId).orElseThrow();
-        if (status != null) {
-            return maintenanceRepository.findByStatus(MaintenanceStatus.valueOf(status.toUpperCase()));
+        if (status != null && !status.trim().isEmpty()) {
+            return maintenanceRepository.findByStatus(MaintenanceStatus.fromString(status));
         }
         return maintenanceRepository.findByStationStationId(staff.getStation().getStationId());
     }

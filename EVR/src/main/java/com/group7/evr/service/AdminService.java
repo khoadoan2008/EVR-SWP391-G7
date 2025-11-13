@@ -1,6 +1,7 @@
 package com.group7.evr.service;
 
 import com.group7.evr.entity.*;
+import com.group7.evr.enums.ComplaintStatus;
 import com.group7.evr.enums.VehicleStatus;
 import com.group7.evr.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -88,7 +89,11 @@ public class AdminService {
     }
 
     public List<Complaint> getComplaintsByStatus(String status) {
-        return complaintRepository.findByStatus(status);
+        if (status == null || status.trim().isEmpty()) {
+            return complaintRepository.findAll();
+        }
+        ComplaintStatus complaintStatus = ComplaintStatus.fromString(status);
+        return complaintRepository.findByStatus(complaintStatus);
     }
 
     // Staff management

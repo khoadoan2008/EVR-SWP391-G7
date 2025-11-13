@@ -1,8 +1,8 @@
 package com.khoadoan.basic.demoswp.service.Impl;
 
-import com.group7.evr.entity.*;
-import com.group7.evr.enums.*;
-import com.group7.evr.repository.*;
+import com.khoadoan.basic.demoswp.repository.*;
+import com.khoadoan.basic.demoswp.entity.*;
+import com.khoadoan.basic.demoswp.service.StationStaffService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -13,10 +13,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
-public class StationStaffServiceImpl {
+public class StationStaffServiceImpl implements StationStaffService {
     @Autowired
     private VehicleRepository vehicleRepository;
     @Autowired
@@ -37,9 +40,11 @@ public class StationStaffServiceImpl {
     private AuditLogRepository auditLogRepository;
     @Autowired
     private MaintenanceRepository maintenanceRepository;
+
     private final String uploadDir = "uploads/reports/"; // Configure properly (e.g., use S3 in production)
 
     // a. View vehicles by status (available, rented, booked)
+    @Override
     public List<Vehicle> getVehiclesByStatus(Integer staffId, String status) {
         User staff = userRepository.findById(staffId)
                 .orElseThrow(() -> new RuntimeException("Staff not found"));
@@ -50,18 +55,19 @@ public class StationStaffServiceImpl {
         if ("Booked".equalsIgnoreCase(status)) {
             // Get vehicles with Pending or Confirmed bookings
             List<Booking> bookings = bookingRepository.findByStationStationIdAndBookingStatusIn(
-                    stationId, List.of(BookingStatus.PENDING, BookingStatus.CONFIRMED));
-            return bookings.stream()
-                    .map(Booking::getVehicle)
-                    .distinct()
-                    .toList();
+                    stationId, List.of("Pending", "Confirmed"));
+            Set<Vehicle> vehicles = new HashSet<>();
+            for(Booking b : bookings) {
+                vehicles.add(b.getVehicle());
+            }
+            return new ArrayList<>(vehicles);
         }
         // Map string to enum for repository
-        VehicleStatus enumStatus = VehicleStatus.valueOf(status.toUpperCase());
-        return vehicleRepository.findByStationStationIdAndStatus(stationId, enumStatus);
+        return vehicleRepository.findByStationStationIdAndStatus(stationId, status);
     }
 
     // a. Create handover report (pre/post rental)
+    @Override
     public VehicleConditionReport createHandoverReport(Integer staffId, Integer contractId, Integer vehicleId,
                                                        BigDecimal battery, String damageDescription, MultipartFile[] photos,
                                                        String reportType) throws IOException {
@@ -94,13 +100,14 @@ public class StationStaffServiceImpl {
             }
             report.setPhotos(photoUrls.toString());
         }
-        report.setReportType(ReportType.valueOf(reportType.toUpperCase())); // Convert string to enum
+        report.setReportType(reportType); // Convert string to enum
         VehicleConditionReport savedReport = reportRepository.save(report);
         logAudit(staff, "Created " + reportType + " report for contract " + contractId);
         return savedReport;
     }
 
     // a. Sign contract
+    @Override
     public Contract signContract(Integer staffId, Integer bookingId, String renterSignature, String staffSignature) {
         User staff = userRepository.findById(staffId)
                 .orElseThrow(() -> new RuntimeException("Staff not found"));
@@ -122,6 +129,7 @@ public class StationStaffServiceImpl {
     }
 
     // b. Verify customer
+    @Override
     public User verifyCustomer(Integer staffId, Integer userId) {
         User staff = userRepository.findById(staffId)
                 .orElseThrow(() -> new RuntimeException("Staff not found"));
@@ -130,13 +138,14 @@ public class StationStaffServiceImpl {
 
         // Logic for verification (e.g., check personalIdImage, licenseImage)
         // Assume verification sets status to Active
-        user.setStatus(UserStatus.ACTIVE);
+        user.setStatus("Active");
         User updatedUser = userRepository.save(user);
         logAudit(staff, "Verified customer " + userId);
         return updatedUser;
     }
 
     // c. Record payment at station
+    @Override
     public Payment recordPayment(Integer staffId, Integer bookingId, String method, BigDecimal amount) {
         User staff = userRepository.findById(staffId)
                 .orElseThrow(() -> new RuntimeException("Staff not found"));
@@ -150,9 +159,9 @@ public class StationStaffServiceImpl {
 
         Payment payment = new Payment();
         payment.setBooking(booking);
-        payment.setMethod(PaymentMethod.valueOf(method.toUpperCase())); // Convert string to enum
+        payment.setMethod(method); // Convert string to enum
         payment.setAmount(amount);
-        payment.setStatus(PaymentStatus.PENDING);
+        payment.setStatus("Pending");
         payment.setPaymentDate(LocalDateTime.now());
         Payment savedPayment = paymentRepository.save(payment);
         logAudit(staff, "Recorded payment " + savedPayment.getPaymentId() + " for booking " + bookingId);
@@ -160,6 +169,7 @@ public class StationStaffServiceImpl {
     }
 
     // c. Create deposit
+    @Override
     public Deposit createDeposit(Integer staffId, Integer bookingId, BigDecimal amount) {
         User staff = userRepository.findById(staffId)
                 .orElseThrow(() -> new RuntimeException("Staff not found"));
@@ -174,13 +184,14 @@ public class StationStaffServiceImpl {
         Deposit deposit = new Deposit();
         deposit.setBooking(booking);
         deposit.setAmount(amount);
-        deposit.setStatus(DepositStatus.HELD);
+        deposit.setStatus("Held");
         Deposit savedDeposit = depositRepository.save(deposit);
         logAudit(staff, "Created deposit " + savedDeposit.getDepositId() + " for booking " + bookingId);
         return savedDeposit;
     }
 
     // c. Refund deposit
+    @Override
     public Deposit refundDeposit(Integer staffId, Integer depositId) {
         User staff = userRepository.findById(staffId)
                 .orElseThrow(() -> new RuntimeException("Staff not found"));
@@ -192,13 +203,14 @@ public class StationStaffServiceImpl {
             throw new RuntimeException("Unauthorized station");
         }
 
-        deposit.setStatus(DepositStatus.REFUNDED);
+        deposit.setStatus("Refunded");
         Deposit updatedDeposit = depositRepository.save(deposit);
         logAudit(staff, "Refunded deposit " + depositId);
         return updatedDeposit;
     }
 
     // d. Update vehicle status
+    @Override
     public Vehicle updateVehicleStatus(Integer staffId, Integer vehicleId, BigDecimal batteryLevel, BigDecimal mileage, String status) {
         User staff = userRepository.findById(staffId)
                 .orElseThrow(() -> new RuntimeException("Staff not found"));
@@ -212,13 +224,14 @@ public class StationStaffServiceImpl {
 
         vehicle.setBatteryLevel(batteryLevel);
         vehicle.setMileage(mileage);
-        vehicle.setStatus(VehicleStatus.valueOf(status.toUpperCase())); // Convert string to enum
+        vehicle.setStatus(status); // Convert string to enum
         Vehicle updatedVehicle = vehicleRepository.save(vehicle);
         logAudit(staff, "Updated vehicle " + vehicleId + " status to " + status);
         return updatedVehicle;
     }
 
     // d. Report vehicle issue
+    @Override
     public Complaint reportVehicleIssue(Integer staffId, Integer vehicleId, String issueDescription) {
         User staff = userRepository.findById(staffId)
                 .orElseThrow(() -> new RuntimeException("Staff not found"));
@@ -235,13 +248,14 @@ public class StationStaffServiceImpl {
         complaint.setUser(staff); // Staff reporting
         complaint.setStaff(null);
         complaint.setIssueDescription(issueDescription + " for vehicle " + vehicleId);
-        complaint.setStatus(ComplaintStatus.PENDING);
+        complaint.setStatus("Pending");
         Complaint savedComplaint = complaintRepository.save(complaint);
         logAudit(staff, "Reported issue for vehicle " + vehicleId);
         return savedComplaint;
     }
 
     // --- New: Maintenance CRUD ---
+    @Override
     public Maintenance createMaintenance(Integer staffId, Integer vehicleId, String issue, LocalDateTime scheduledAt) {
         User staff = userRepository.findById(staffId).orElseThrow();
         Vehicle vehicle = vehicleRepository.findById(vehicleId).orElseThrow();
@@ -253,22 +267,23 @@ public class StationStaffServiceImpl {
         m.setStation(staff.getStation());
         m.setStaff(staff);
         m.setIssueDescription(issue);
-        m.setStatus(MaintenanceStatus.OPEN);
+        m.setStatus("Open");
         m.setScheduledAt(scheduledAt);
         Maintenance saved = maintenanceRepository.save(m);
         logAudit(staff, "Created maintenance " + saved.getMaintenanceId());
         return saved;
     }
 
+    @Override
     public Maintenance updateMaintenance(Integer staffId, Integer maintenanceId, String status, String remarks) {
         User staff = userRepository.findById(staffId).orElseThrow();
         Maintenance m = maintenanceRepository.findById(maintenanceId).orElseThrow();
         if (!m.getStation().getStationId().equals(staff.getStation().getStationId())) {
             throw new RuntimeException("Unauthorized station");
         }
-        m.setStatus(MaintenanceStatus.valueOf(status.toUpperCase()));
+        m.setStatus(status);
         m.setRemarks(remarks);
-        if (MaintenanceStatus.CLOSED.equals(m.getStatus())) {
+        if ("Closed".equals(m.getStatus())) {
             m.setClosedAt(LocalDateTime.now());
         }
         Maintenance saved = maintenanceRepository.save(m);
@@ -276,10 +291,11 @@ public class StationStaffServiceImpl {
         return saved;
     }
 
+    @Override
     public List<Maintenance> listMaintenance(Integer staffId, String status) {
         User staff = userRepository.findById(staffId).orElseThrow();
         if (status != null) {
-            return maintenanceRepository.findByStatus(MaintenanceStatus.valueOf(status.toUpperCase()));
+            return maintenanceRepository.findByStatus(status);
         }
         return maintenanceRepository.findByStationStationId(staff.getStation().getStationId());
     }

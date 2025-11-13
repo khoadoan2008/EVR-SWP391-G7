@@ -3,15 +3,19 @@ package com.group7.evr.service;
 import com.group7.evr.entity.Booking;
 import com.group7.evr.entity.User;
 import com.group7.evr.entity.Vehicle;
+import com.group7.evr.entity.Station;
 import com.group7.evr.enums.BookingStatus;
+import com.group7.evr.enums.UserRole;
 import com.group7.evr.enums.VehicleStatus;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 import com.group7.evr.repository.BookingRepository;
 import com.group7.evr.repository.VehicleRepository;
+import com.group7.evr.repository.StationRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalTime;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,9 +29,25 @@ public class BookingService {
     private VehicleRepository vehicleRepository;
     @Autowired
     private UserService userService;
+    @Autowired
+    private StationRepository stationRepository;
+    @Autowired
+    private EmailService emailService;
 
     public Booking createBooking(Booking booking, User user) {
         Vehicle vehicle = vehicleRepository.findById(booking.getVehicle().getVehicleId()).orElseThrow();
+        Station vehicleStation = vehicle.getStation();
+        Station requestStation = booking.getStation();
+        if (vehicleStation == null && (requestStation == null || requestStation.getStationId() == null)) {
+            throw new RuntimeException("Vehicle is not assigned to any station");
+        }
+        if (vehicleStation != null && requestStation != null
+                && requestStation.getStationId() != null
+                && !vehicleStation.getStationId().equals(requestStation.getStationId())) {
+            throw new RuntimeException("Vehicle does not belong to the selected station");
+        }
+        Station resolvedStation = vehicleStation != null ? vehicleStation : requestStation;
+        booking.setStation(resolvedStation);
         
         // Enhanced validation
         if (!VehicleStatus.AVAILABLE.equals(vehicle.getStatus())) {
@@ -49,9 +69,15 @@ public class BookingService {
         vehicle.setStatus(VehicleStatus.RENTED);
         vehicleRepository.save(vehicle);
         booking.setUser(user);
+        Integer stationId = booking.getStation() != null ? booking.getStation().getStationId() : null;
+        if (stationId != null) {
+            booking.setStaff(userService.getPrimaryStaffForStation(stationId));
+        }
         booking.setBookingStatus(BookingStatus.PENDING);
-        userService.logAudit(user, "Created booking " + booking.getBookingId());
-        return bookingRepository.save(booking);
+        Booking savedBooking = bookingRepository.save(booking);
+        userService.logAudit(user, "Created booking " + savedBooking.getBookingId());
+        emailService.sendBookingConfirmation(savedBooking);
+        return savedBooking;
     }
 
     // --- New: Get booking by ID ---
@@ -65,10 +91,12 @@ public class BookingService {
         List<Booking> allBookings = bookingRepository.findByUserUserId(userId);
         
         // Apply filters
+        BookingStatus statusEnum = status != null ? BookingStatus.fromString(status) : null;
+
         List<Booking> filteredBookings = allBookings.stream()
-                .filter(booking -> status == null || booking.getBookingStatus().toString().equals(status))
+                .filter(booking -> statusEnum == null || booking.getBookingStatus() == statusEnum)
                 .filter(booking -> fromDate == null || booking.getStartTime().toString().compareTo(fromDate) >= 0)
-                .filter(booking -> toDate == null || booking.getEndTime().toString().compareTo(toDate) <= 0)
+                .filter(booking -> toDate == null || booking.getStartTime().toString().compareTo(toDate) <= 0)
                 .toList();
         
         // Apply pagination
@@ -101,8 +129,25 @@ public class BookingService {
 
     public Booking checkIn(Integer bookingId, User user, User staff) {
         Booking booking = bookingRepository.findById(bookingId).orElseThrow();
+        BookingStatus currentStatus = booking.getBookingStatus();
+        if (BookingStatus.CONFIRMED.equals(currentStatus)) {
+            return booking;
+        }
+        if (BookingStatus.COMPLETED.equals(currentStatus) || BookingStatus.CANCELLED.equals(currentStatus)) {
+            throw new RuntimeException("Booking cannot be checked in with status " + currentStatus);
+        }
         booking.setBookingStatus(BookingStatus.CONFIRMED);
         booking.setStaff(staff);
+        Station station = booking.getStation();
+        if (station != null) {
+            Integer availableSlots = station.getAvailableSlots();
+            int currentAvailable = availableSlots != null ? availableSlots : 0;
+            if (currentAvailable <= 0) {
+                throw new RuntimeException("No available slots remaining at station " + station.getStationId());
+            }
+            station.setAvailableSlots(currentAvailable - 1);
+            stationRepository.save(station);
+        }
         // Create contract, report, etc.
         userService.logAudit(user, "Checked in booking " + bookingId);
         return bookingRepository.save(booking);
@@ -110,16 +155,61 @@ public class BookingService {
 
     public Booking returnVehicle(Integer bookingId, User user, User staff) {
         Booking booking = bookingRepository.findById(bookingId).orElseThrow();
+        BookingStatus currentStatus = booking.getBookingStatus();
+        if (BookingStatus.COMPLETED.equals(currentStatus)) {
+            return booking;
+        }
+        if (!BookingStatus.CONFIRMED.equals(currentStatus)) {
+            throw new RuntimeException("Only confirmed bookings can be returned");
+        }
         booking.setBookingStatus(BookingStatus.COMPLETED);
         Vehicle vehicle = booking.getVehicle();
         vehicle.setStatus(VehicleStatus.AVAILABLE);
         vehicleRepository.save(vehicle);
+        Station station = booking.getStation();
+        if (station != null) {
+            Integer availableSlots = station.getAvailableSlots();
+            Integer totalSlots = station.getTotalSlots();
+            int currentAvailable = availableSlots != null ? availableSlots : 0;
+            int nextAvailable = currentAvailable + 1;
+            if (totalSlots != null && nextAvailable > totalSlots) {
+                nextAvailable = totalSlots;
+            }
+            station.setAvailableSlots(nextAvailable);
+            stationRepository.save(station);
+        }
         userService.logAudit(user, "Returned vehicle for booking " + bookingId);
         return bookingRepository.save(booking);
     }
 
     public List<Booking> getUserHistory(Integer userId) {
         return bookingRepository.findByUserUserId(userId);
+    }
+
+    public List<Booking> getCheckInQueue(Integer staffId) {
+        return getBookingsForStaff(staffId, List.of(BookingStatus.PENDING));
+    }
+
+    public List<Booking> getReturnQueue(Integer staffId) {
+        return getBookingsForStaff(staffId, List.of(BookingStatus.CONFIRMED));
+    }
+
+    private List<Booking> getBookingsForStaff(Integer staffId, List<BookingStatus> statuses) {
+        User staff = userService.getUserById(staffId);
+        if (!UserRole.STAFF.equals(staff.getRole())) {
+            throw new RuntimeException("User is not a staff member");
+        }
+        if (staff.getStation() == null || staff.getStation().getStationId() == null) {
+            throw new RuntimeException("Staff is not assigned to a station");
+        }
+
+        if (statuses == null || statuses.isEmpty()) {
+            statuses = Arrays.asList(BookingStatus.values());
+        }
+        return bookingRepository.findByStationStationIdAndBookingStatusIn(
+                staff.getStation().getStationId(),
+                statuses
+        );
     }
 
     public Map<String, Object> getUserAnalytics(Integer userId) {
@@ -245,5 +335,4 @@ public class BookingService {
         // Mock calculation - would check battery usage
         return BigDecimal.ZERO;
     }
-    
 }

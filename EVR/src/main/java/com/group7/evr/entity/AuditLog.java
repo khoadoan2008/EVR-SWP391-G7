@@ -15,6 +15,7 @@ public class AuditLog {
     @ManyToOne
     @JoinColumn(name = "UserID")
     private User user;
+    @Column(columnDefinition = "NVARCHAR(255)")
     private String action;
     private LocalDateTime timestamp = LocalDateTime.now();
 }

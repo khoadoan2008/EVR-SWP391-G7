@@ -57,6 +57,16 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.returnVehicle(id, user, staff));
     }
 
+    @GetMapping("/staff/bookings/checkin-queue")
+    public ResponseEntity<List<Booking>> getCheckInQueue(@RequestParam Integer staffId) {
+        return ResponseEntity.ok(bookingService.getCheckInQueue(staffId));
+    }
+
+    @GetMapping("/staff/bookings/return-queue")
+    public ResponseEntity<List<Booking>> getReturnQueue(@RequestParam Integer staffId) {
+        return ResponseEntity.ok(bookingService.getReturnQueue(staffId));
+    }
+
     // 5a. History
     @GetMapping("/bookings/user")
     public ResponseEntity<List<Booking>> getHistory(@RequestParam Integer userId) {
@@ -120,7 +130,7 @@ public class BookingController {
     public ResponseEntity<String> uploadReturnInspection(
             @PathVariable Integer id,
             @RequestParam Integer userId) {
-        User actor = userService.getUserById(userId);
+        userService.getUserById(userId);
         // TODO: implement with file uploads & checklist
         return ResponseEntity.ok("Return inspection received for booking " + id);
     }
