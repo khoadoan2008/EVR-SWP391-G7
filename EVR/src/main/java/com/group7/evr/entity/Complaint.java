@@ -1,6 +1,7 @@
 package com.group7.evr.entity;
 
 import com.group7.evr.enums.ComplaintStatus;
+import com.group7.evr.enums.converter.ComplaintStatusConverter;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -22,9 +23,10 @@ public class Complaint {
     @ManyToOne
     @JoinColumn(name = "StaffID")
     private User staff;
+    @Column(columnDefinition = "NVARCHAR(255)")
     private String issueDescription;
     private LocalDateTime createdAt = LocalDateTime.now();
     
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = ComplaintStatusConverter.class)
     private ComplaintStatus status = ComplaintStatus.PENDING;
 }

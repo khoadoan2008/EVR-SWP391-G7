@@ -20,4 +20,21 @@ public enum BookingStatus {
     public String toString() {
         return value;
     }
+
+    public static BookingStatus fromString(String input) {
+        if (input == null || input.trim().isEmpty()) {
+            throw new IllegalArgumentException("Booking status cannot be null or blank");
+        }
+        String normalized = input.trim();
+        try {
+            return BookingStatus.valueOf(normalized.toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            for (BookingStatus status : values()) {
+                if (status.value.equalsIgnoreCase(normalized)) {
+                    return status;
+                }
+            }
+            throw new IllegalArgumentException("Unsupported booking status: " + input, ex);
+        }
+    }
 }

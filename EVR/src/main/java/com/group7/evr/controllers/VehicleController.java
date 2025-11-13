@@ -1,10 +1,12 @@
 package com.group7.evr.controllers;
 
 import com.group7.evr.entity.Vehicle;
+import com.group7.evr.enums.VehicleStatus;
 import com.group7.evr.service.VehicleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.group7.evr.repository.VehicleRepository;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
@@ -15,23 +17,32 @@ import java.util.Map;
 @RequestMapping("/api")
 public class VehicleController {
     @Autowired
+    private VehicleRepository vehicleRepository;
+    @Autowired
     private VehicleService vehicleService;
 
     @GetMapping("/vehicles/available")
     public ResponseEntity<List<Vehicle>> getAvailableVehicles(@RequestParam Integer stationId) {
-        return ResponseEntity.ok(vehicleService.getAvailableVehicles(stationId));
+        return ResponseEntity.ok(vehicleRepository.findByStationStationIdAndStatus(stationId, VehicleStatus.AVAILABLE));
     }
 
     @GetMapping("/vehicles/{id}")
     public ResponseEntity<Vehicle> getVehicle(@PathVariable Integer id) {
-        return ResponseEntity.ok(vehicleService.getVehicle(id));
+        return ResponseEntity.of(vehicleRepository.findById(id));
     }
 
     @GetMapping("/vehicles")
     public ResponseEntity<List<Vehicle>> findVehicles(
             @RequestParam(required = false) Integer modelId,
-            @RequestParam(required = false) BigDecimal minBattery) {
-        return ResponseEntity.ok(vehicleService.findVehicles(modelId, minBattery));
+            @RequestParam(required = false) BigDecimal minBattery
+    ) {
+        if (modelId != null) {
+            return ResponseEntity.ok(vehicleRepository.findByModelModelId(modelId));
+        }
+        if (minBattery != null) {
+            return ResponseEntity.ok(vehicleRepository.findByBatteryLevelGreaterThanEqual(minBattery));
+        }
+        return ResponseEntity.ok(vehicleRepository.findAll());
     }
 
     // Vehicle issue reporting

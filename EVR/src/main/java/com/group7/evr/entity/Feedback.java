@@ -24,6 +24,7 @@ public class Feedback {
     private FeedbackCategory category;
     
     private Integer stars;
+    @Column(columnDefinition = "NVARCHAR(255)")
     private String comment;
     private LocalDateTime createdAt = LocalDateTime.now();
 }

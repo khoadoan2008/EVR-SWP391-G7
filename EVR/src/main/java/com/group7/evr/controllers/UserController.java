@@ -1,26 +1,36 @@
 package com.group7.evr.controllers;
 
+import com.group7.evr.dto.UserRegistrationRequest;
 import com.group7.evr.entity.User;
 import com.group7.evr.service.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.util.UriComponentsBuilder;
 
+import java.io.IOException;
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
+@RequiredArgsConstructor
 public class UserController {
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
+
+    @Value("${app.frontend.login-url:http://localhost:5173/login}")
+    private String loginRedirectUrl;
 
     @PostMapping("/users/register")
-    public ResponseEntity<User> register(@ModelAttribute User user,
+    public ResponseEntity<User> register(@Valid @ModelAttribute UserRegistrationRequest request,
                                          @RequestParam(value = "personalIdImage", required = false) MultipartFile personalIdImage,
-                                         @RequestParam(value = "licenseImage", required = false) MultipartFile licenseImage) throws Exception {
-        return ResponseEntity.ok(userService.register(user, personalIdImage, licenseImage));
+                                         @RequestParam(value = "licenseImage", required = false) MultipartFile licenseImage) throws IOException {
+        return ResponseEntity.ok(userService.register(request, personalIdImage, licenseImage));
     }
 
     @PostMapping("/users/login")
@@ -38,6 +48,13 @@ public class UserController {
     @PutMapping("/users/{id}")
     public ResponseEntity<User> updateUser(@PathVariable Integer id, @RequestBody User userUpdates) {
         return ResponseEntity.ok(userService.updateUser(id, userUpdates));
+    }
+
+    @PutMapping("/users/{id}/password")
+    public ResponseEntity<Map<String, String>> changePassword(@PathVariable Integer id,
+                                                              @RequestBody Map<String, String> payload) {
+        userService.changePassword(id, payload.get("currentPassword"), payload.get("newPassword"));
+        return ResponseEntity.ok(Map.of("message", "Password updated successfully"));
     }
 
     @PutMapping("/users/{id}/verify")
@@ -66,5 +83,24 @@ public class UserController {
             @RequestParam String status,
             @RequestParam(required = false) String reason) {
         return ResponseEntity.ok(userService.updateUserStatus(id, status, reason));
+    }
+
+    @GetMapping("/users/verify-email")
+    public ResponseEntity<Void> verifyEmail(@RequestParam("token") String token) {
+        try {
+            userService.verifyEmailToken(token);
+            URI redirectUri = UriComponentsBuilder.fromUriString(loginRedirectUrl)
+                    .queryParam("verified", "true")
+                    .build(true)
+                    .toUri();
+            return ResponseEntity.status(HttpStatus.FOUND).location(redirectUri).build();
+        } catch (RuntimeException ex) {
+            URI redirectUri = UriComponentsBuilder.fromUriString(loginRedirectUrl)
+                    .queryParam("verified", "false")
+                    .queryParam("reason", ex.getMessage())
+                    .build(true)
+                    .toUri();
+            return ResponseEntity.status(HttpStatus.FOUND).location(redirectUri).build();
+        }
     }
 }
