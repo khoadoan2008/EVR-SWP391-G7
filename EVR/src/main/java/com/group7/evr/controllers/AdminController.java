@@ -1,8 +1,11 @@
 package com.group7.evr.controllers;
 
 import com.group7.evr.entity.*;
+import com.group7.evr.enums.ComplaintStatus;
 import com.group7.evr.service.AdminService;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.group7.evr.service.ComplaintService;
+import com.group7.evr.service.UserService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,9 +15,11 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin")
+@RequiredArgsConstructor
 public class AdminController {
-    @Autowired
-    private AdminService adminService;
+    private final AdminService adminService;
+    private final ComplaintService complaintService;
+    private final UserService userService;
 
     // Fleet monitoring
     @GetMapping("/fleet/summary")
@@ -49,12 +54,36 @@ public class AdminController {
         return ResponseEntity.ok(adminService.flagCustomer(id, adminId, reason, riskScore));
     }
 
+    @PutMapping("/customers/{id}/status")
+    public ResponseEntity<User> updateCustomerStatus(
+            @PathVariable Integer id,
+            @RequestParam String status,
+            @RequestParam(required = false) String reason) {
+        return ResponseEntity.ok(userService.updateUserStatus(id, status, reason));
+    }
+
     @GetMapping("/complaints")
     public ResponseEntity<List<Complaint>> getComplaints(@RequestParam(required = false) String status) {
         if (status == null) {
             return ResponseEntity.ok(adminService.getComplaintsByStatus("Pending"));
         }
         return ResponseEntity.ok(adminService.getComplaintsByStatus(status));
+    }
+
+    @GetMapping("/complaints/{id}")
+    public ResponseEntity<Complaint> getComplaintById(@PathVariable Integer id) {
+        return ResponseEntity.ok(complaintService.getComplaintById(id));
+    }
+
+    @PutMapping("/complaints/{id}/respond")
+    public ResponseEntity<Complaint> respondToComplaint(
+            @PathVariable Integer id,
+            @RequestParam Integer adminId,
+            @RequestParam String response,
+            @RequestParam String status) {
+        User admin = userService.getUserById(adminId);
+        ComplaintStatus complaintStatus = ComplaintStatus.fromString(status);
+        return ResponseEntity.ok(complaintService.respondToComplaint(id, response, complaintStatus, admin));
     }
 
     // Staff management
@@ -89,13 +118,89 @@ public class AdminController {
             @RequestParam(required = false) Integer stationId,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to) {
-        LocalDateTime fromDate = from != null ? LocalDateTime.parse(from) : LocalDateTime.now().minusMonths(1);
-        LocalDateTime toDate = to != null ? LocalDateTime.parse(to) : LocalDateTime.now();
-        
-        if (stationId == null) {
-            stationId = 1; // Default station
+        // Validate required parameters
+        if (from == null || from.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", "From date is required",
+                "message", "Vui lòng chọn ngày bắt đầu"
+            ));
         }
-        return ResponseEntity.ok(adminService.getRevenueReport(stationId, fromDate, toDate));
+        if (to == null || to.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", "To date is required",
+                "message", "Vui lòng chọn ngày kết thúc"
+            ));
+        }
+        
+        try {
+            // Parse datetime with flexible format (with or without seconds)
+            LocalDateTime fromDate;
+            LocalDateTime toDate;
+            
+            // Try format without seconds first (datetime-local format), then with seconds
+            java.time.format.DateTimeFormatter formatterWithoutSeconds = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
+            
+            // Parse from date
+            try {
+                // Try format without seconds first (most common from datetime-local input)
+                fromDate = LocalDateTime.parse(from, formatterWithoutSeconds);
+            } catch (java.time.format.DateTimeParseException e) {
+                // If that fails, try ISO format with seconds
+                try {
+                    fromDate = LocalDateTime.parse(from);
+                } catch (java.time.format.DateTimeParseException e2) {
+                    return ResponseEntity.badRequest().body(Map.of(
+                        "error", "Invalid date format",
+                        "message", "Định dạng ngày bắt đầu không hợp lệ: " + from + ". Vui lòng sử dụng định dạng: yyyy-MM-ddTHH:mm"
+                    ));
+                }
+            }
+            
+            // Parse to date
+            try {
+                // Try format without seconds first (most common from datetime-local input)
+                toDate = LocalDateTime.parse(to, formatterWithoutSeconds);
+            } catch (java.time.format.DateTimeParseException e) {
+                // If that fails, try ISO format with seconds
+                try {
+                    toDate = LocalDateTime.parse(to);
+                } catch (java.time.format.DateTimeParseException e2) {
+                    return ResponseEntity.badRequest().body(Map.of(
+                        "error", "Invalid date format",
+                        "message", "Định dạng ngày kết thúc không hợp lệ: " + to + ". Vui lòng sử dụng định dạng: yyyy-MM-ddTHH:mm"
+                    ));
+                }
+            }
+            
+            // Validate date range
+            if (fromDate.isAfter(toDate)) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "error", "Invalid date range",
+                    "message", "Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc"
+                ));
+            }
+            
+            // Validate dates are not too far in the future
+            LocalDateTime now = LocalDateTime.now();
+            if (fromDate.isAfter(now) || toDate.isAfter(now.plusDays(1))) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "error", "Invalid date range",
+                    "message", "Ngày không được vượt quá hiện tại"
+                ));
+            }
+            
+            return ResponseEntity.ok(adminService.getRevenueReport(stationId, fromDate, toDate));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", "Invalid date format",
+                "message", "Định dạng ngày không hợp lệ: " + e.getMessage()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", "Invalid date format",
+                "message", "Định dạng ngày không hợp lệ: " + e.getMessage()
+            ));
+        }
     }
 
     @GetMapping("/reports/utilization")

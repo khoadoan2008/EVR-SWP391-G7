@@ -2,8 +2,8 @@ package com.group7.evr.controllers;
 
 import com.group7.evr.entity.Maintenance;
 import com.group7.evr.entity.VehicleConditionReport;
-import com.group7.evr.service.StationStaffService;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.group7.evr.service.impl.StationStaffServiceImpl;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -14,10 +14,9 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/staff")
+@RequiredArgsConstructor
 public class StationStaffController {
-
-    @Autowired
-    private StationStaffService stationStaffService;
+    private final StationStaffServiceImpl stationStaffService;
 
     @PostMapping("/handover")
     public ResponseEntity<VehicleConditionReport> createHandover(

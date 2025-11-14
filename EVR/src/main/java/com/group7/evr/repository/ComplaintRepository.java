@@ -10,4 +10,5 @@ import java.util.List;
 @Repository
 public interface ComplaintRepository extends JpaRepository<Complaint,Integer> {
     List<Complaint> findByStatus(ComplaintStatus status);
+    List<Complaint> findByUserUserId(Integer userId);
 }
