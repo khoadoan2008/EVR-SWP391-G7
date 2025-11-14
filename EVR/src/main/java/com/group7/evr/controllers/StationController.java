@@ -2,25 +2,22 @@ package com.group7.evr.controllers;
 
 import com.group7.evr.entity.Station;
 import com.group7.evr.service.StationService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import com.group7.evr.repository.StationRepository;
 
 import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
+@RequiredArgsConstructor
 public class StationController {
-    @Autowired
-    private StationRepository stationRepository;
-    @Autowired
-    private StationService stationService;
+    private final StationService stationService;
 
     @GetMapping("/stations")
     public ResponseEntity<List<Station>> getStations() {
-        return ResponseEntity.ok(stationRepository.findAll());
+        return ResponseEntity.ok(stationService.getAllStations());
     }
 
     // Nearby stations by bounding box around lat/lng with radius (approx using degrees)
@@ -30,13 +27,7 @@ public class StationController {
             @RequestParam Double lng,
             @RequestParam(defaultValue = "0.02") Double radiusDeg
     ) {
-        Double minLat = lat - radiusDeg;
-        Double maxLat = lat + radiusDeg;
-        Double minLng = lng - radiusDeg;
-        Double maxLng = lng + radiusDeg;
-        return ResponseEntity.ok(
-                stationRepository.findByLatitudeBetweenAndLongitudeBetween(minLat, maxLat, minLng, maxLng)
-        );
+        return ResponseEntity.ok(stationService.getNearbyStations(lat, lng, radiusDeg));
     }
 
     // Admin: Station CRUD operations

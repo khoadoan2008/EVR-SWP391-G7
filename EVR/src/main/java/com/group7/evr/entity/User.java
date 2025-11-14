@@ -1,7 +1,10 @@
 package com.group7.evr.entity;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.group7.evr.enums.UserRole;
+import com.group7.evr.enums.UserRoleDeserializer;
 import com.group7.evr.enums.UserStatus;
+import com.group7.evr.enums.UserStatusDeserializer;
 import com.group7.evr.enums.converter.UserRoleConverter;
 import com.group7.evr.enums.converter.UserStatusConverter;
 import jakarta.persistence.*;
@@ -48,10 +51,12 @@ public class User {
 
     @Column(name = "Role")
     @Convert(converter = UserRoleConverter.class)
+    @JsonDeserialize(using = UserRoleDeserializer.class)
     private UserRole role;
 
     @Column(name = "Status")
     @Convert(converter = UserStatusConverter.class)
+    @JsonDeserialize(using = UserStatusDeserializer.class)
     private UserStatus status = UserStatus.PENDING_VERIFICATION;
 
     @Column(name = "EmailVerified")

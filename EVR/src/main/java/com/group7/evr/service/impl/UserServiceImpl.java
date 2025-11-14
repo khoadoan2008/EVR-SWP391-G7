@@ -128,6 +128,24 @@ public class UserServiceImpl implements UserService {
         return userRepository.save(user);
     }
 
+    private String saveFile(MultipartFile file) throws IOException {
+        Files.createDirectories(uploadDir);
+        String originalName = StringUtils.cleanPath(Objects.requireNonNullElse(file.getOriginalFilename(), "document"));
+        String fileName = UUID.randomUUID() + "_" + originalName;
+        Path path = uploadDir.resolve(fileName);
+        Files.write(path, file.getBytes());
+        return path.toString();
+    }
+
+    @Override
+    public void logAudit(User user, String action) {
+        AuditLog log = new AuditLog();
+        log.setUser(user);
+        log.setAction(action);
+        log.setTimestamp(LocalDateTime.now());
+        auditLogRepository.save(log);
+    }
+
     @Override
     public User getUserById(Integer userId) {
         return userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
@@ -139,11 +157,11 @@ public class UserServiceImpl implements UserService {
         if (user == null) {
             throw new RuntimeException("Invalid email or password");
         }
-
+        
         if (user.getPasswordHash() == null || !passwordEncoder.matches(password, user.getPasswordHash())) {
             throw new RuntimeException("Invalid email or password");
         }
-
+        
         if (!Boolean.TRUE.equals(user.getEmailVerified()) || UserStatus.PENDING_VERIFICATION.equals(user.getStatus())) {
             throw new RuntimeException("Tài khoản chưa được xác thực. Vui lòng kiểm tra email của bạn.");
         }
@@ -151,15 +169,15 @@ public class UserServiceImpl implements UserService {
         if (UserStatus.SUSPENDED.equals(user.getStatus()) || UserStatus.DELETED.equals(user.getStatus())) {
             throw new RuntimeException("Account is not active");
         }
-
+        
         // Generate JWT token (mock implementation)
         String token = "jwt_token_" + user.getUserId() + "_" + System.currentTimeMillis();
-
+        
         Map<String, Object> response = new HashMap<>();
         response.put("token", token);
         response.put("user", sanitizeUserData(user));
         response.put("message", "Login successful");
-
+        
         logAudit(user, "User logged in");
         return response;
     }
@@ -168,8 +186,13 @@ public class UserServiceImpl implements UserService {
     public User updateUser(Integer userId, User userUpdates) {
         User existingUser = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-
-        // Update allowed fields only
+        
+        // If updating a staff user, use updateStaff method
+        if (UserRole.STAFF.equals(existingUser.getRole())) {
+            return updateStaff(userId, userUpdates);
+        }
+        
+        // Update allowed fields only for non-staff users
         if (userUpdates.getName() != null) {
             existingUser.setName(userUpdates.getName());
         }
@@ -182,7 +205,13 @@ public class UserServiceImpl implements UserService {
         if (userUpdates.getEmail() != null) {
             existingUser.setEmail(userUpdates.getEmail());
         }
-
+        if (userUpdates.getDateOfBirth() != null) {
+            existingUser.setDateOfBirth(userUpdates.getDateOfBirth());
+        }
+        if (userUpdates.getStatus() != null) {
+            existingUser.setStatus(userUpdates.getStatus());
+        }
+        
         User updatedUser = userRepository.save(existingUser);
         logAudit(updatedUser, "Updated user profile " + userId);
         return updatedUser;
@@ -211,28 +240,44 @@ public class UserServiceImpl implements UserService {
         logAudit(user, "Updated user password");
     }
 
+    private User sanitizeUserData(User user) {
+        User sanitized = new User();
+        sanitized.setUserId(user.getUserId());
+        sanitized.setName(user.getName());
+        sanitized.setEmail(user.getEmail());
+        sanitized.setPhone(user.getPhone());
+        sanitized.setAddress(user.getAddress());
+        sanitized.setRole(user.getRole());
+        sanitized.setStatus(user.getStatus());
+        sanitized.setCreatedAt(user.getCreatedAt());
+        sanitized.setEmailVerified(user.getEmailVerified());
+        sanitized.setVerifiedAt(user.getVerifiedAt());
+        // Don't include password hash, personal documents, etc.
+        return sanitized;
+    }
+
     @Override
     public Map<String, Object> getAllUsers(int page, int size, String role, String status) {
         List<User> allUsers = userRepository.findAll();
-
+        
         // Apply filters
         List<User> filteredUsers = allUsers.stream()
                 .filter(user -> role == null || user.getRole().toString().equals(role))
                 .filter(user -> status == null || user.getStatus().toString().equals(status))
                 .toList();
-
+        
         // Apply pagination
         int start = page * size;
         int end = Math.min(start + size, filteredUsers.size());
         List<User> paginatedUsers = filteredUsers.subList(start, end);
-
+        
         Map<String, Object> response = new HashMap<>();
         response.put("users", paginatedUsers);
         response.put("totalCount", filteredUsers.size());
         response.put("page", page);
         response.put("size", size);
         response.put("totalPages", (int) Math.ceil((double) filteredUsers.size() / size));
-
+        
         return response;
     }
 
@@ -252,20 +297,29 @@ public class UserServiceImpl implements UserService {
     public User updateUserStatus(Integer userId, String status, String reason) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-
+        
         // Validate status
         if (!isValidStatus(status)) {
             throw new RuntimeException("Invalid status. Must be: Active, Suspended, Banned");
         }
-
+        
         String oldStatus = user.getStatus().toString();
         user.setStatus(UserStatus.valueOf(status.toUpperCase()));
         User updatedUser = userRepository.save(user);
-
-        logAudit(updatedUser, "Updated user status from " + oldStatus + " to " + status +
+        
+        logAudit(updatedUser, "Updated user status from " + oldStatus + " to " + status + 
                 (reason != null ? " - Reason: " + reason : ""));
-
+        
         return updatedUser;
+    }
+
+    private boolean isValidStatus(String status) {
+        if (status == null) {
+            return false;
+        }
+        return Arrays.stream(UserStatus.values())
+                .anyMatch(userStatus -> userStatus.name().equalsIgnoreCase(status)
+                        || userStatus.getValue().equalsIgnoreCase(status));
     }
 
     @Override
@@ -277,10 +331,7 @@ public class UserServiceImpl implements UserService {
         if (staff.getEmail() == null || staff.getEmail().trim().isEmpty()) {
             throw new RuntimeException("Staff email is required");
         }
-        if (staff.getStation() == null || staff.getStation().getStationId() == null) {
-            throw new RuntimeException("Station assignment is required for staff");
-        }
-
+        
         // Set staff-specific defaults
         staff.setRole(UserRole.STAFF);
         staff.setStatus(UserStatus.ACTIVE);
@@ -291,7 +342,7 @@ public class UserServiceImpl implements UserService {
         staff.setPasswordHash(passwordEncoder.encode(rawPassword));
         staff.setEmailVerified(Boolean.TRUE);
         staff.setVerifiedAt(LocalDateTime.now());
-
+        
         User savedStaff = userRepository.save(staff);
         logAudit(savedStaff, "Created staff " + savedStaff.getUserId());
         return savedStaff;
@@ -300,7 +351,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public List<User> getStaff(Integer stationId) {
         List<User> allUsers = userRepository.findAll();
-
+        
         return allUsers.stream()
                 .filter(user -> UserRole.STAFF.equals(user.getRole()))
                 .filter(user -> stationId == null || (user.getStation() != null && user.getStation().getStationId().equals(stationId)))
@@ -321,11 +372,11 @@ public class UserServiceImpl implements UserService {
     public User updateStaff(Integer staffId, User staffUpdates) {
         User existingStaff = userRepository.findById(staffId)
                 .orElseThrow(() -> new RuntimeException("Staff not found"));
-
+        
         if (!UserRole.STAFF.equals(existingStaff.getRole())) {
             throw new RuntimeException("User is not a staff member");
         }
-
+        
         // Update allowed fields
         if (staffUpdates.getName() != null) {
             existingStaff.setName(staffUpdates.getName());
@@ -339,10 +390,19 @@ public class UserServiceImpl implements UserService {
         if (staffUpdates.getEmail() != null) {
             existingStaff.setEmail(staffUpdates.getEmail());
         }
+        if (staffUpdates.getDateOfBirth() != null) {
+            existingStaff.setDateOfBirth(staffUpdates.getDateOfBirth());
+        }
+        if (staffUpdates.getStatus() != null) {
+            existingStaff.setStatus(staffUpdates.getStatus());
+        }
+        // Station can be updated, but is not required if not provided (existing station is kept)
         if (staffUpdates.getStation() != null && staffUpdates.getStation().getStationId() != null) {
             existingStaff.setStation(staffUpdates.getStation());
         }
-
+        // Only validate station if it's being removed (set to null explicitly)
+        // If station is not in the update, keep the existing one
+        
         User updatedStaff = userRepository.save(existingStaff);
         logAudit(updatedStaff, "Updated staff " + staffId);
         return updatedStaff;
@@ -352,68 +412,24 @@ public class UserServiceImpl implements UserService {
     public Map<String, Object> deleteStaff(Integer staffId) {
         User staff = userRepository.findById(staffId)
                 .orElseThrow(() -> new RuntimeException("Staff not found"));
-
+        
         if (!UserRole.STAFF.equals(staff.getRole())) {
             throw new RuntimeException("User is not a staff member");
         }
-
+        
         // Check for active bookings/handovers (would need to implement this check)
         // For now, we'll allow deletion but log a warning
-
+        
         // Soft delete by setting status to 'Inactive'
         staff.setStatus(UserStatus.DELETED);
         userRepository.save(staff);
-
+        
         logAudit(staff, "Deleted staff " + staffId);
-
+        
         Map<String, Object> response = new HashMap<>();
         response.put("message", "Staff deleted successfully");
         response.put("staffId", staffId);
         return response;
     }
-
-    // ============ PRIVATE HELPER METHODS ============
-
-    private String saveFile(MultipartFile file) throws IOException {
-        Files.createDirectories(uploadDir);
-        String originalName = StringUtils.cleanPath(Objects.requireNonNullElse(file.getOriginalFilename(), "document"));
-        String fileName = UUID.randomUUID() + "_" + originalName;
-        Path path = uploadDir.resolve(fileName);
-        Files.write(path, file.getBytes());
-        return path.toString();
-    }
-
-    @Override
-    public void logAudit(User user, String action) {
-        AuditLog log = new AuditLog();
-        log.setUser(user);
-        log.setAction(action);
-        log.setTimestamp(LocalDateTime.now());
-        auditLogRepository.save(log);
-    }
-
-    private User sanitizeUserData(User user) {
-        User sanitized = new User();
-        sanitized.setUserId(user.getUserId());
-        sanitized.setName(user.getName());
-        sanitized.setEmail(user.getEmail());
-        sanitized.setPhone(user.getPhone());
-        sanitized.setAddress(user.getAddress());
-        sanitized.setRole(user.getRole());
-        sanitized.setStatus(user.getStatus());
-        sanitized.setCreatedAt(user.getCreatedAt());
-        sanitized.setEmailVerified(user.getEmailVerified());
-        sanitized.setVerifiedAt(user.getVerifiedAt());
-        // Don't include password hash, personal documents, etc.
-        return sanitized;
-    }
-
-    private boolean isValidStatus(String status) {
-        if (status == null) {
-            return false;
-        }
-        return Arrays.stream(UserStatus.values())
-                .anyMatch(userStatus -> userStatus.name().equalsIgnoreCase(status)
-                        || userStatus.getValue().equalsIgnoreCase(status));
-    }
 }
+

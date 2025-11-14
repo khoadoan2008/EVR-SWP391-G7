@@ -1,6 +1,7 @@
 package com.group7.evr.service.impl;
 
 import com.group7.evr.entity.*;
+import com.group7.evr.enums.BookingStatus;
 import com.group7.evr.enums.ComplaintStatus;
 import com.group7.evr.enums.VehicleStatus;
 import com.group7.evr.repository.*;
@@ -140,16 +141,114 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public Map<String, Object> getRevenueReport(Integer stationId, LocalDateTime from, LocalDateTime to) {
-        List<Booking> bookings = bookingRepository.findByStationStationId(stationId);
+        // Validate parameters are LocalDateTime objects
+        if (from == null || to == null) {
+            throw new RuntimeException("From date and to date are required");
+        }
+
+        // Validate date range
+        if (from.isAfter(to)) {
+            throw new RuntimeException("From date must be before or equal to to date");
+        }
+        if (from.isAfter(LocalDateTime.now())) {
+            throw new RuntimeException("From date cannot be in the future");
+        }
+
+        // Only count COMPLETED bookings for revenue
+        List<BookingStatus> completedStatuses = List.of(
+                com.group7.evr.enums.BookingStatus.COMPLETED
+        );
+
+        // Get all COMPLETED bookings (with optional station filter), then filter by date in Java
+        List<Booking> allBookings;
+        if (stationId != null) {
+            // Get bookings for specific station
+            allBookings = bookingRepository.findByStationStationIdAndBookingStatusIn(
+                    stationId,
+                    completedStatuses
+            );
+        } else {
+            // Get all COMPLETED bookings
+            allBookings = bookingRepository.findByBookingStatus(BookingStatus.COMPLETED);
+        }
+
+        // Filter by date range in Java code to avoid JPA parameter binding issues
+        // Convert java.sql.Date to LocalDateTime for comparison
+        List<Booking> bookings = allBookings.stream()
+                .filter(b -> {
+                    java.sql.Date startTimeDate = b.getStartTime();
+                    if (startTimeDate == null) return false;
+                    // Convert java.sql.Date to LocalDateTime via java.util.Date
+                    java.util.Date utilDate = new java.util.Date(startTimeDate.getTime());
+                    LocalDateTime startTime = utilDate.toInstant()
+                            .atZone(java.time.ZoneId.systemDefault())
+                            .toLocalDateTime();
+                    return !startTime.isBefore(from) && !startTime.isAfter(to);
+                })
+                .collect(java.util.stream.Collectors.toList());
+
         BigDecimal totalRevenue = bookings.stream()
+                .filter(b -> b.getTotalPrice() != null)
                 .map(Booking::getTotalPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal averageRevenue = bookings.isEmpty()
+                ? BigDecimal.ZERO
+                : totalRevenue.divide(BigDecimal.valueOf(bookings.size()), 2, java.math.RoundingMode.HALF_UP);
 
         Map<String, Object> report = new HashMap<>();
         report.put("totalRevenue", totalRevenue);
         report.put("totalBookings", bookings.size());
-        report.put("averageBookingValue", bookings.isEmpty() ? BigDecimal.ZERO :
-                totalRevenue.divide(BigDecimal.valueOf(bookings.size())));
+        report.put("averageRevenue", averageRevenue);
+
+        // Calculate top stations by revenue
+        if (stationId == null) {
+            List<Station> allStations = stationRepository.findAll();
+            List<Map<String, Object>> topStations = allStations.stream()
+                    .map(station -> {
+                        // Get all COMPLETED bookings for this station
+                        List<Booking> allStationBookings = bookingRepository.findByStationStationIdAndBookingStatusIn(
+                                station.getStationId(),
+                                completedStatuses
+                        );
+
+                        // Filter by date range in Java code
+                        // Convert java.sql.Date to LocalDateTime for comparison
+                        List<Booking> stationBookings = allStationBookings.stream()
+                                .filter(b -> {
+                                    java.sql.Date startTimeDate = b.getStartTime();
+                                    if (startTimeDate == null) return false;
+                                    // Convert java.sql.Date to LocalDateTime via java.util.Date
+                                    java.util.Date utilDate = new java.util.Date(startTimeDate.getTime());
+                                    LocalDateTime startTime = utilDate.toInstant()
+                                            .atZone(java.time.ZoneId.systemDefault())
+                                            .toLocalDateTime();
+                                    return !startTime.isBefore(from) && !startTime.isAfter(to);
+                                })
+                                .collect(java.util.stream.Collectors.toList());
+
+                        BigDecimal stationRevenue = stationBookings.stream()
+                                .filter(b -> b.getTotalPrice() != null)
+                                .map(Booking::getTotalPrice)
+                                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                        BigDecimal stationAvg = stationBookings.isEmpty()
+                                ? BigDecimal.ZERO
+                                : stationRevenue.divide(BigDecimal.valueOf(stationBookings.size()), 2, java.math.RoundingMode.HALF_UP);
+
+                        Map<String, Object> stationData = new HashMap<>();
+                        stationData.put("stationId", station.getStationId());
+                        stationData.put("name", station.getName());
+                        stationData.put("revenue", stationRevenue);
+                        stationData.put("bookings", stationBookings.size());
+                        stationData.put("averageRevenue", stationAvg);
+                        return stationData;
+                    })
+                    .filter(s -> ((BigDecimal) s.get("revenue")).compareTo(BigDecimal.ZERO) > 0)
+                    .sorted((a, b) -> ((BigDecimal) b.get("revenue")).compareTo((BigDecimal) a.get("revenue")))
+                    .limit(5)
+                    .toList();
+            report.put("topStations", topStations);
+        }
 
         return report;
     }

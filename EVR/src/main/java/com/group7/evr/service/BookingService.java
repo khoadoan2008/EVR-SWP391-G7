@@ -7,30 +7,33 @@ import java.util.List;
 import java.util.Map;
 
 public interface BookingService {
+    Booking createBooking(Booking booking, User user);
 
-    public Booking createBooking(Booking booking, User user);
+    Booking getBookingById(Integer bookingId);
 
-    public Booking getBookingById(Integer bookingId);
+    Map<String, Object> getUserBookingsWithFilters(Integer userId, String status, String fromDate, String toDate, int page, int size);
+        
+    Booking checkIn(Integer bookingId, User user, User staff);
 
-    public Map<String, Object> getUserBookingsWithFilters(Integer userId, String status, String fromDate, String toDate, int page, int size);
+    Booking returnVehicle(Integer bookingId, User user, User staff, Double batteryLevel);
 
-    public Booking checkIn(Integer bookingId, User user, User staff);
+    List<Booking> getUserHistory(Integer userId);
 
-    public Booking returnVehicle(Integer bookingId, User user, User staff);
+    List<Booking> getCheckInQueue(Integer staffId);
 
-    public List<Booking> getUserHistory(Integer userId);
+    List<Booking> getReturnQueue(Integer staffId);
 
-    public List<Booking> getCheckInQueue(Integer staffId);
+    List<Booking> getStaffContracts(Integer staffId);
 
-    public List<Booking> getReturnQueue(Integer staffId);
+    Map<String, Object> getUserAnalytics(Integer userId);
 
-    public Map<String, Object> getUserAnalytics(Integer userId);
+    Map<String, Object> getAdvancedUserAnalytics(Integer userId);
 
-    public Map<String, Object> getAdvancedUserAnalytics(Integer userId);
+    Booking modifyBooking(Integer bookingId, Booking updates, User actor);
 
-    public Booking modifyBooking(Integer bookingId, Booking updates, User actor);
+    Booking cancelBooking(Integer bookingId, User actor);
 
-    public Booking cancelBooking(Integer bookingId, User actor);
+    Booking denyBooking(Integer bookingId, User staff, String reason);
 
-    public Map<String, Object> settleBooking(Integer bookingId, User actor);
+    Map<String, Object> settleBooking(Integer bookingId, User actor);
 }

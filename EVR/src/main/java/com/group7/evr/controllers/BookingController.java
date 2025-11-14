@@ -4,20 +4,23 @@ import com.group7.evr.entity.Booking;
 import com.group7.evr.entity.User;
 import com.group7.evr.service.BookingService;
 import com.group7.evr.service.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.group7.evr.repository.ContractRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
+import java.util.ArrayList;
 
 @RestController
 @RequestMapping("/api")
+@RequiredArgsConstructor
 public class BookingController {
-    @Autowired
-    private BookingService bookingService;
-    @Autowired
-    private UserService userService;
+    private final BookingService bookingService;
+    private final UserService userService;
+    private final ContractRepository contractRepository;
 
     // 2c. Book vehicle
     @PostMapping("/bookings")
@@ -51,10 +54,13 @@ public class BookingController {
     public ResponseEntity<Booking> returnVehicle(
             @PathVariable Integer id,
             @RequestParam Integer userId,
-            @RequestBody User staff) {
+            @RequestBody Map<String, Object> returnData) {
 
         User user = userService.getUserById(userId);
-        return ResponseEntity.ok(bookingService.returnVehicle(id, user, staff));
+        User staff = user; // Staff is the same as user for now
+        Double batteryLevel = returnData.containsKey("batteryLevel") && returnData.get("batteryLevel") != null 
+            ? ((Number) returnData.get("batteryLevel")).doubleValue() : null;
+        return ResponseEntity.ok(bookingService.returnVehicle(id, user, staff, batteryLevel));
     }
 
     @GetMapping("/staff/bookings/checkin-queue")
@@ -65,6 +71,57 @@ public class BookingController {
     @GetMapping("/staff/bookings/return-queue")
     public ResponseEntity<List<Booking>> getReturnQueue(@RequestParam Integer staffId) {
         return ResponseEntity.ok(bookingService.getReturnQueue(staffId));
+    }
+
+    @GetMapping("/staff/bookings/contracts")
+    public ResponseEntity<Map<String, Object>> getStaffContracts(@RequestParam Integer staffId) {
+        List<Booking> bookings = bookingService.getStaffContracts(staffId);
+        
+        // Load contracts for each booking
+        List<Map<String, Object>> contractsData = new ArrayList<>();
+        for (Booking booking : bookings) {
+            Map<String, Object> bookingData = new HashMap<>();
+            bookingData.put("booking", booking);
+            
+            // Find contract for this booking
+            contractRepository.findByBookingBookingId(booking.getBookingId())
+                .ifPresent(contract -> {
+                    Map<String, Object> contractData = new HashMap<>();
+                    contractData.put("contractId", contract.getContractId());
+                    contractData.put("renterSignature", contract.getRenterSignature());
+                    contractData.put("staffSignature", contract.getStaffSignature());
+                    contractData.put("signedAt", contract.getSignedAt());
+                    contractData.put("status", contract.getStatus() != null ? contract.getStatus().toString() : null);
+                    bookingData.put("contract", contractData);
+                });
+            
+            contractsData.add(bookingData);
+        }
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("contracts", contractsData);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/staff/bookings/{bookingId}/contract")
+    public ResponseEntity<Map<String, Object>> getContractByBookingId(@PathVariable Integer bookingId) {
+        Booking booking = bookingService.getBookingById(bookingId);
+        Map<String, Object> response = new HashMap<>();
+        response.put("booking", booking);
+        
+        // Find contract for this booking
+        contractRepository.findByBookingBookingId(bookingId)
+            .ifPresent(contract -> {
+                Map<String, Object> contractData = new HashMap<>();
+                contractData.put("contractId", contract.getContractId());
+                contractData.put("renterSignature", contract.getRenterSignature());
+                contractData.put("staffSignature", contract.getStaffSignature());
+                contractData.put("signedAt", contract.getSignedAt());
+                contractData.put("status", contract.getStatus() != null ? contract.getStatus().toString() : null);
+                response.put("contract", contractData);
+            });
+        
+        return ResponseEntity.ok(response);
     }
 
     // 5a. History
@@ -114,6 +171,17 @@ public class BookingController {
             @RequestParam Integer userId) {
         User actor = userService.getUserById(userId);
         return ResponseEntity.ok(bookingService.cancelBooking(id, actor));
+    }
+
+    // New: deny booking (staff only)
+    @PutMapping("/bookings/{id}/deny")
+    public ResponseEntity<Booking> denyBooking(
+            @PathVariable Integer id,
+            @RequestParam Integer staffId,
+            @RequestBody(required = false) Map<String, String> request) {
+        User staff = userService.getUserById(staffId);
+        String reason = request != null ? request.get("reason") : null;
+        return ResponseEntity.ok(bookingService.denyBooking(id, staff, reason));
     }
 
     // New: settlement

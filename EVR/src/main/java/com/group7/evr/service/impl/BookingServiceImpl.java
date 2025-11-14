@@ -13,7 +13,8 @@ import com.group7.evr.repository.StationRepository;
 import com.group7.evr.service.BookingService;
 import com.group7.evr.service.EmailService;
 import com.group7.evr.service.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -25,17 +26,14 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
+@Slf4j
 public class BookingServiceImpl implements BookingService {
-    @Autowired
-    private BookingRepository bookingRepository;
-    @Autowired
-    private VehicleRepository vehicleRepository;
-    @Autowired
-    private UserService userService;
-    @Autowired
-    private StationRepository stationRepository;
-    @Autowired
-    private EmailService emailService;
+    private final BookingRepository bookingRepository;
+    private final VehicleRepository vehicleRepository;
+    private final UserService userService;
+    private final StationRepository stationRepository;
+    private final EmailService emailService;
 
     @Override
     public Booking createBooking(Booking booking, User user) {
@@ -52,24 +50,24 @@ public class BookingServiceImpl implements BookingService {
         }
         Station resolvedStation = vehicleStation != null ? vehicleStation : requestStation;
         booking.setStation(resolvedStation);
-
+        
         // Enhanced validation
         if (!VehicleStatus.AVAILABLE.equals(vehicle.getStatus())) {
             throw new RuntimeException("Vehicle not available");
         }
-
+        
         // Check for time conflicts
         if (hasTimeConflict(booking)) {
             throw new RuntimeException("Booking time conflicts with existing booking");
         }
-
+        
         // Validate booking dates
         if (booking.getStartTime() != null && booking.getEndTime() != null) {
             if (booking.getStartTime().after(booking.getEndTime())) {
                 throw new RuntimeException("Start time cannot be after end time");
             }
         }
-
+        
         vehicle.setStatus(VehicleStatus.RENTED);
         vehicleRepository.save(vehicle);
         booking.setUser(user);
@@ -93,7 +91,7 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public Map<String, Object> getUserBookingsWithFilters(Integer userId, String status, String fromDate, String toDate, int page, int size) {
         List<Booking> allBookings = bookingRepository.findByUserUserId(userId);
-
+        
         // Apply filters
         BookingStatus statusEnum = status != null ? BookingStatus.fromString(status) : null;
 
@@ -102,20 +100,32 @@ public class BookingServiceImpl implements BookingService {
                 .filter(booking -> fromDate == null || booking.getStartTime().toString().compareTo(fromDate) >= 0)
                 .filter(booking -> toDate == null || booking.getStartTime().toString().compareTo(toDate) <= 0)
                 .toList();
-
+        
         // Apply pagination
         int start = page * size;
         int end = Math.min(start + size, filteredBookings.size());
         List<Booking> paginatedBookings = filteredBookings.subList(start, end);
-
+        
         Map<String, Object> response = new HashMap<>();
         response.put("bookings", paginatedBookings);
         response.put("totalCount", filteredBookings.size());
         response.put("page", page);
         response.put("size", size);
         response.put("totalPages", (int) Math.ceil((double) filteredBookings.size() / size));
-
+        
         return response;
+    }
+
+    private boolean hasTimeConflict(Booking newBooking) {
+        List<Booking> existingBookings = bookingRepository.findByVehicleVehicleId(newBooking.getVehicle().getVehicleId());
+        
+        return existingBookings.stream()
+                .filter(booking -> !BookingStatus.CANCELLED.equals(booking.getBookingStatus()) && !BookingStatus.COMPLETED.equals(booking.getBookingStatus()))
+                .anyMatch(booking -> {
+                    // Simple time overlap check
+                    return (newBooking.getStartTime().before(booking.getEndTime()) && 
+                           newBooking.getEndTime().after(booking.getStartTime()));
+                });
     }
 
     @Override
@@ -146,7 +156,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public Booking returnVehicle(Integer bookingId, User user, User staff) {
+    public Booking returnVehicle(Integer bookingId, User user, User staff, Double batteryLevel) {
         Booking booking = bookingRepository.findById(bookingId).orElseThrow();
         BookingStatus currentStatus = booking.getBookingStatus();
         if (BookingStatus.COMPLETED.equals(currentStatus)) {
@@ -158,6 +168,15 @@ public class BookingServiceImpl implements BookingService {
         booking.setBookingStatus(BookingStatus.COMPLETED);
         Vehicle vehicle = booking.getVehicle();
         vehicle.setStatus(VehicleStatus.AVAILABLE);
+        
+        // Update battery level if provided
+        if (batteryLevel != null) {
+            if (batteryLevel < 0 || batteryLevel > 100) {
+                throw new RuntimeException("Battery level must be between 0 and 100");
+            }
+            vehicle.setBatteryLevel(java.math.BigDecimal.valueOf(batteryLevel));
+        }
+        
         vehicleRepository.save(vehicle);
         Station station = booking.getStation();
         if (station != null) {
@@ -171,7 +190,7 @@ public class BookingServiceImpl implements BookingService {
             station.setAvailableSlots(nextAvailable);
             stationRepository.save(station);
         }
-        userService.logAudit(user, "Returned vehicle for booking " + bookingId);
+        userService.logAudit(user, "Returned vehicle for booking " + bookingId + (batteryLevel != null ? " with battery level " + batteryLevel + "%" : ""));
         return bookingRepository.save(booking);
     }
 
@@ -182,12 +201,46 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public List<Booking> getCheckInQueue(Integer staffId) {
-        return getBookingsForStaff(staffId, List.of(BookingStatus.PENDING));
+        return getBookingsForStaff(staffId, List.of(BookingStatus.PENDING, BookingStatus.DENIED));
     }
 
     @Override
     public List<Booking> getReturnQueue(Integer staffId) {
         return getBookingsForStaff(staffId, List.of(BookingStatus.CONFIRMED));
+    }
+
+    @Override
+    public List<Booking> getStaffContracts(Integer staffId) {
+        User staff = userService.getUserById(staffId);
+        if (!UserRole.STAFF.equals(staff.getRole())) {
+            throw new RuntimeException("User is not a staff member");
+        }
+        if (staff.getStation() == null || staff.getStation().getStationId() == null) {
+            throw new RuntimeException("Staff is not assigned to a station");
+        }
+        // Get all bookings for the staff's station (all statuses except cancelled)
+        return bookingRepository.findByStationStationId(staff.getStation().getStationId())
+                .stream()
+                .filter(booking -> !BookingStatus.CANCELLED.equals(booking.getBookingStatus()))
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    private List<Booking> getBookingsForStaff(Integer staffId, List<BookingStatus> statuses) {
+        User staff = userService.getUserById(staffId);
+        if (!UserRole.STAFF.equals(staff.getRole())) {
+            throw new RuntimeException("User is not a staff member");
+        }
+        if (staff.getStation() == null || staff.getStation().getStationId() == null) {
+            throw new RuntimeException("Staff is not assigned to a station");
+        }
+
+        if (statuses == null || statuses.isEmpty()) {
+            statuses = Arrays.asList(BookingStatus.values());
+        }
+        return bookingRepository.findByStationStationIdAndBookingStatusIn(
+                staff.getStation().getStationId(),
+                statuses
+        );
     }
 
     @Override
@@ -204,36 +257,36 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public Map<String, Object> getAdvancedUserAnalytics(Integer userId) {
         List<Booking> bookings = getUserHistory(userId);
-
+        
         // Peak/Off-peak analysis
         Map<String, Long> peakHours = bookings.stream()
                 .collect(Collectors.groupingBy(
-                        booking -> {
-                            LocalTime startTime = booking.getStartTime().toLocalDate().atStartOfDay().toLocalTime();
-                            int hour = startTime.getHour();
-                            return (hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 19) ? "Peak" : "Off-Peak";
-                        },
-                        Collectors.counting()
+                    booking -> {
+                        LocalTime startTime = booking.getStartTime().toLocalDate().atStartOfDay().toLocalTime();
+                        int hour = startTime.getHour();
+                        return (hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 19) ? "Peak" : "Off-Peak";
+                    },
+                    Collectors.counting()
                 ));
-
+        
         // Distance analysis (mock - would need actual distance calculation)
         BigDecimal totalDistance = bookings.stream()
                 .map(booking -> booking.getVehicle().getMileage() != null ? booking.getVehicle().getMileage() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-
+        
         // Spending categories
         Map<String, BigDecimal> spendingCategories = new HashMap<>();
         spendingCategories.put("rental", bookings.stream()
                 .map(Booking::getTotalPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add));
         spendingCategories.put("fees", BigDecimal.ZERO); // Would calculate from actual fees
-
+        
         Map<String, Object> analytics = new HashMap<>();
         analytics.put("peakHours", peakHours);
         analytics.put("totalDistance", totalDistance);
         analytics.put("spendingCategories", spendingCategories);
         analytics.put("totalBookings", bookings.size());
-
+        
         return analytics;
     }
 
@@ -246,7 +299,7 @@ public class BookingServiceImpl implements BookingService {
         if (updates.getStartTime() != null) booking.setStartTime(updates.getStartTime());
         if (updates.getEndTime() != null) booking.setEndTime(updates.getEndTime());
         if (updates.getVehicle() != null && updates.getVehicle().getVehicleId() != null
-                && !updates.getVehicle().getVehicleId().equals(booking.getVehicle().getVehicleId())) {
+        && !updates.getVehicle().getVehicleId().equals(booking.getVehicle().getVehicleId())) {
             Vehicle current = booking.getVehicle();
             current.setStatus(VehicleStatus.AVAILABLE);
             vehicleRepository.save(current);
@@ -277,17 +330,52 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
+    public Booking denyBooking(Integer bookingId, User staff, String reason) {
+        Booking booking = bookingRepository.findById(bookingId).orElseThrow();
+        BookingStatus currentStatus = booking.getBookingStatus();
+        
+        if (BookingStatus.COMPLETED.equals(currentStatus) || BookingStatus.CANCELLED.equals(currentStatus) 
+                || BookingStatus.DENIED.equals(currentStatus) || BookingStatus.CONFIRMED.equals(currentStatus)) {
+            throw new RuntimeException("Booking cannot be denied in current status: " + currentStatus);
+        }
+        
+        // Verify staff has permission (staff should be assigned to the station)
+        if (staff.getStation() == null || booking.getStation() == null 
+                || !staff.getStation().getStationId().equals(booking.getStation().getStationId())) {
+            throw new RuntimeException("Staff is not authorized to deny this booking");
+        }
+        
+        booking.setBookingStatus(BookingStatus.DENIED);
+        booking.setStaff(staff);
+        
+        // Release the vehicle back to available
+        Vehicle vehicle = booking.getVehicle();
+        if (vehicle != null) {
+            vehicle.setStatus(VehicleStatus.AVAILABLE);
+            vehicleRepository.save(vehicle);
+        }
+        
+        userService.logAudit(staff, "Denied booking " + bookingId + (reason != null ? ": " + reason : ""));
+        Booking savedBooking = bookingRepository.save(booking);
+        
+        // Send denial notification email
+        emailService.sendBookingDenial(savedBooking, reason);
+        
+        return savedBooking;
+    }
+
+    @Override
     public Map<String, Object> settleBooking(Integer bookingId, User actor) {
         Booking booking = bookingRepository.findById(bookingId).orElseThrow();
-
+        
         BigDecimal basePrice = booking.getTotalPrice() != null ? booking.getTotalPrice() : BigDecimal.ZERO;
         BigDecimal lateFee = calculateLateFee(booking);
         BigDecimal damageFee = calculateDamageFee(booking);
         BigDecimal energyFee = calculateEnergyFee(booking);
-
+        
         BigDecimal extraFees = lateFee.add(damageFee).add(energyFee);
         BigDecimal total = basePrice.add(extraFees);
-
+        
         Map<String, Object> settlement = new HashMap<>();
         settlement.put("basePrice", basePrice);
         settlement.put("lateFee", lateFee);
@@ -295,55 +383,24 @@ public class BookingServiceImpl implements BookingService {
         settlement.put("energyFee", energyFee);
         settlement.put("extraFees", extraFees);
         settlement.put("total", total);
-
+        
         userService.logAudit(actor, "Settled booking " + bookingId + " with total: " + total);
         return settlement;
     }
-
-    // ============ PRIVATE HELPER METHODS ============
-
-    private boolean hasTimeConflict(Booking newBooking) {
-        List<Booking> existingBookings = bookingRepository.findByVehicleVehicleId(newBooking.getVehicle().getVehicleId());
-
-        return existingBookings.stream()
-                .filter(booking -> !BookingStatus.CANCELLED.equals(booking.getBookingStatus()) && !BookingStatus.COMPLETED.equals(booking.getBookingStatus()))
-                .anyMatch(booking -> {
-                    // Simple time overlap check
-                    return (newBooking.getStartTime().before(booking.getEndTime()) &&
-                            newBooking.getEndTime().after(booking.getStartTime()));
-                });
-    }
-
-    private List<Booking> getBookingsForStaff(Integer staffId, List<BookingStatus> statuses) {
-        User staff = userService.getUserById(staffId);
-        if (!UserRole.STAFF.equals(staff.getRole())) {
-            throw new RuntimeException("User is not a staff member");
-        }
-        if (staff.getStation() == null || staff.getStation().getStationId() == null) {
-            throw new RuntimeException("Staff is not assigned to a station");
-        }
-
-        if (statuses == null || statuses.isEmpty()) {
-            statuses = Arrays.asList(BookingStatus.values());
-        }
-        return bookingRepository.findByStationStationIdAndBookingStatusIn(
-                staff.getStation().getStationId(),
-                statuses
-        );
-    }
-
+    
     private BigDecimal calculateLateFee(Booking booking) {
         // Mock calculation - would use actual time differences
         return BigDecimal.ZERO;
     }
-
+    
     private BigDecimal calculateDamageFee(Booking booking) {
         // Mock calculation - would check vehicle condition reports
         return BigDecimal.ZERO;
     }
-
+    
     private BigDecimal calculateEnergyFee(Booking booking) {
         // Mock calculation - would check battery usage
         return BigDecimal.ZERO;
     }
 }
+
