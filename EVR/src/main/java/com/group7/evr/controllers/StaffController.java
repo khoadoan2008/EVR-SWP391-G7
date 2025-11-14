@@ -2,7 +2,7 @@ package com.group7.evr.controllers;
 
 import com.group7.evr.entity.User;
 import com.group7.evr.service.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,9 +11,9 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
+@RequiredArgsConstructor
 public class StaffController {
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
 
     // Admin: Staff management
     @PostMapping("/staff")

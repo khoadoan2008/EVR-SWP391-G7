@@ -29,4 +29,13 @@ public class Complaint {
     
     @Convert(converter = ComplaintStatusConverter.class)
     private ComplaintStatus status = ComplaintStatus.PENDING;
+    
+    @Column(columnDefinition = "NVARCHAR(MAX)")
+    private String adminResponse;
+    
+    private LocalDateTime respondedAt;
+    
+    @ManyToOne
+    @JoinColumn(name = "RespondedByAdminID")
+    private User respondedByAdmin;
 }

@@ -1,6 +1,7 @@
 package com.group7.evr.service;
 
 import com.group7.evr.entity.Booking;
+import com.group7.evr.entity.Complaint;
 import com.group7.evr.entity.User;
 
 public interface EmailService {
@@ -18,5 +19,20 @@ public interface EmailService {
      * @param booking the booking to include in the email
      */
     void sendBookingConfirmation(Booking booking);
+
+    /**
+     * Send booking denial notification email to the customer.
+     *
+     * @param booking the denied booking
+     * @param reason the reason for denial (optional)
+     */
+    void sendBookingDenial(Booking booking, String reason);
+
+    /**
+     * Send complaint response email to the customer.
+     *
+     * @param complaint the complaint with admin response
+     */
+    void sendComplaintResponse(Complaint complaint);
 }
 

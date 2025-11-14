@@ -1,12 +1,10 @@
 package com.group7.evr.controllers;
 
 import com.group7.evr.entity.Vehicle;
-import com.group7.evr.enums.VehicleStatus;
 import com.group7.evr.service.VehicleService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import com.group7.evr.repository.VehicleRepository;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
@@ -15,34 +13,34 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
+@RequiredArgsConstructor
 public class VehicleController {
-    @Autowired
-    private VehicleRepository vehicleRepository;
-    @Autowired
-    private VehicleService vehicleService;
+    private final VehicleService vehicleService;
 
     @GetMapping("/vehicles/available")
     public ResponseEntity<List<Vehicle>> getAvailableVehicles(@RequestParam Integer stationId) {
-        return ResponseEntity.ok(vehicleRepository.findByStationStationIdAndStatus(stationId, VehicleStatus.AVAILABLE));
+        return ResponseEntity.ok(vehicleService.getAvailableVehicles(stationId));
     }
 
     @GetMapping("/vehicles/{id}")
     public ResponseEntity<Vehicle> getVehicle(@PathVariable Integer id) {
-        return ResponseEntity.of(vehicleRepository.findById(id));
+        return ResponseEntity.ok(vehicleService.getVehicleById(id));
     }
 
     @GetMapping("/vehicles")
-    public ResponseEntity<List<Vehicle>> findVehicles(
+    public ResponseEntity<?> findVehicles(
             @RequestParam(required = false) Integer modelId,
-            @RequestParam(required = false) BigDecimal minBattery
+            @RequestParam(required = false) BigDecimal minBattery,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) String status
     ) {
-        if (modelId != null) {
-            return ResponseEntity.ok(vehicleRepository.findByModelModelId(modelId));
+        // If pagination params are provided, use getAllVehicles
+        if (page != null && size != null) {
+            return ResponseEntity.ok(vehicleService.getAllVehicles(page, size, status));
         }
-        if (minBattery != null) {
-            return ResponseEntity.ok(vehicleRepository.findByBatteryLevelGreaterThanEqual(minBattery));
-        }
-        return ResponseEntity.ok(vehicleRepository.findAll());
+        // Otherwise, use the old findVehicles method
+        return ResponseEntity.ok(vehicleService.findVehicles(modelId, minBattery));
     }
 
     // Vehicle issue reporting

@@ -2,13 +2,19 @@ package com.group7.evr.service;
 
 import com.group7.evr.entity.Station;
 
+import java.util.List;
 import java.util.Map;
 
 public interface StationService {
+    List<Station> getAllStations();
 
-    public Station createStation(Station station);
+    List<Station> getNearbyStations(Double lat, Double lng, Double radiusDeg);
 
-    public Station updateStation(Integer stationId, Station stationUpdates);
+    Station createStation(Station station);
 
-    public Map<String, Object> deleteStation(Integer stationId);
+    Station updateStation(Integer stationId, Station stationUpdates);
+
+    Map<String, Object> deleteStation(Integer stationId);
+    
+    void recalculateStationSlots(Integer stationId);
 }
