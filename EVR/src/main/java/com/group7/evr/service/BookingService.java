@@ -1,6 +1,7 @@
 package com.group7.evr.service;
 
 import com.group7.evr.entity.Booking;
+import com.group7.evr.entity.Contract;
 import com.group7.evr.entity.User;
 
 import java.util.List;
@@ -36,4 +37,5 @@ public interface BookingService {
     Booking denyBooking(Integer bookingId, User staff, String reason);
 
     Map<String, Object> settleBooking(Integer bookingId, User actor);
+    Map<String, Object> getStaffContractsWithDetails(Integer staffId);
 }

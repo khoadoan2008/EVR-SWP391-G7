@@ -1,13 +1,11 @@
 package com.group7.evr.service.impl;
 
-import com.group7.evr.entity.Booking;
-import com.group7.evr.entity.User;
-import com.group7.evr.entity.Vehicle;
-import com.group7.evr.entity.Station;
+import com.group7.evr.entity.*;
 import com.group7.evr.enums.BookingStatus;
 import com.group7.evr.enums.UserRole;
 import com.group7.evr.enums.VehicleStatus;
 import com.group7.evr.repository.BookingRepository;
+import com.group7.evr.repository.ContractRepository;
 import com.group7.evr.repository.VehicleRepository;
 import com.group7.evr.repository.StationRepository;
 import com.group7.evr.service.BookingService;
@@ -19,10 +17,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalTime;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -34,6 +29,7 @@ public class BookingServiceImpl implements BookingService {
     private final UserService userService;
     private final StationRepository stationRepository;
     private final EmailService emailService;
+    private final ContractRepository contractRepository;
 
     @Override
     public Booking createBooking(Booking booking, User user) {
@@ -362,6 +358,36 @@ public class BookingServiceImpl implements BookingService {
         emailService.sendBookingDenial(savedBooking, reason);
         
         return savedBooking;
+    }
+
+    @Override
+    public Map<String, Object> getStaffContractsWithDetails(Integer staffId) {
+        List<Booking> bookings = getStaffContracts(staffId);
+
+        // Load contracts for each booking
+        List<Map<String, Object>> contractsData = new ArrayList<>();
+        for (Booking booking : bookings) {
+            Map<String, Object> bookingData = new HashMap<>();
+            bookingData.put("booking", booking);
+
+            // Find contract for this booking
+            contractRepository.findByBookingBookingId(booking.getBookingId())
+                    .ifPresent(contract -> {
+                        Map<String, Object> contractData = new HashMap<>();
+                        contractData.put("contractId", contract.getContractId());
+                        contractData.put("renterSignature", contract.getRenterSignature());
+                        contractData.put("staffSignature", contract.getStaffSignature());
+                        contractData.put("signedAt", contract.getSignedAt());
+                        contractData.put("status", contract.getStatus() != null ? contract.getStatus().toString() : null);
+                        bookingData.put("contract", contractData);
+                    });
+
+            contractsData.add(bookingData);
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("contracts", contractsData);
+        return response;
     }
 
     @Override

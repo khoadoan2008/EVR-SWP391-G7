@@ -55,13 +55,15 @@ public class AdminServiceImpl implements AdminService {
     public Vehicle dispatchVehicle(Integer fromStationId, Integer toStationId, Integer vehicleId) {
         Vehicle vehicle = vehicleRepository.findById(vehicleId).orElseThrow();
         Station targetStation = stationRepository.findById(toStationId).orElseThrow();
-
+        Station oldStation = stationRepository.findById(fromStationId).orElseThrow();
         if (!vehicle.getStation().getStationId().equals(fromStationId)) {
             throw new RuntimeException("Vehicle not at source station");
         }
 
         vehicle.setStation(targetStation);
         Vehicle updatedVehicle = vehicleRepository.save(vehicle);
+        targetStation.setAvailableSlots(targetStation.getAvailableSlots() + 1);
+        oldStation.setAvailableSlots(oldStation.getAvailableSlots() - 1);
         userService.logAudit(null, "Dispatched vehicle " + vehicleId + " from station " + fromStationId + " to " + toStationId);
         return updatedVehicle;
     }

@@ -75,32 +75,7 @@ public class BookingController {
 
     @GetMapping("/staff/bookings/contracts")
     public ResponseEntity<Map<String, Object>> getStaffContracts(@RequestParam Integer staffId) {
-        List<Booking> bookings = bookingService.getStaffContracts(staffId);
-        
-        // Load contracts for each booking
-        List<Map<String, Object>> contractsData = new ArrayList<>();
-        for (Booking booking : bookings) {
-            Map<String, Object> bookingData = new HashMap<>();
-            bookingData.put("booking", booking);
-            
-            // Find contract for this booking
-            contractRepository.findByBookingBookingId(booking.getBookingId())
-                .ifPresent(contract -> {
-                    Map<String, Object> contractData = new HashMap<>();
-                    contractData.put("contractId", contract.getContractId());
-                    contractData.put("renterSignature", contract.getRenterSignature());
-                    contractData.put("staffSignature", contract.getStaffSignature());
-                    contractData.put("signedAt", contract.getSignedAt());
-                    contractData.put("status", contract.getStatus() != null ? contract.getStatus().toString() : null);
-                    bookingData.put("contract", contractData);
-                });
-            
-            contractsData.add(bookingData);
-        }
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("contracts", contractsData);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(bookingService.getStaffContractsWithDetails(staffId));
     }
 
     @GetMapping("/staff/bookings/{bookingId}/contract")
