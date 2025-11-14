@@ -1,3 +1,19 @@
+INSERT INTO Users (UserID, Address, CreatedAt, DateOfBirth, Email, LicenseImage, Name, PasswordHash, PersonalImage, Phone, Role, Status, StationID)
+VALUES
+(1, 'Admin Address', '2024-01-01 08:00:00.000000', '1980-01-15', 'admin@evr.com', NULL, 'Admin User', '$2a$10$dummyhash', 'admin_id.jpg', '0900000001', 'ADMIN', 'ACTIVE', NULL),
+(2, '123 Staff St', '2024-01-02 09:00:00.000000', '1990-03-20', 'john.staff@evr.com', 'john_license.jpg', 'John Staff', '$2a$10$dummyhash', 'john_id.jpg', '0900000002', 'STAFF', 'ACTIVE', 1),
+(3, '456 Staff Ave', '2024-01-03 09:00:00.000000', '1992-05-15', 'jane.staff@evr.com', 'jane_license.jpg', 'Jane Staff', '$2a$10$dummyhash', 'jane_id.jpg', '0900000003', 'STAFF', 'ACTIVE', 1),
+(4, '789 Staff Rd', '2024-01-04 09:00:00.000000', '1988-07-10', 'bob.staff@evr.com', 'bob_license.jpg', 'Bob Staff', '$2a$10$dummyhash', 'bob_id.jpg', '0900000004', 'STAFF', 'ACTIVE', 2),
+(5, '321 Staff Blvd', '2024-01-05 09:00:00.000000', '1991-09-25', 'alice.staff@evr.com', 'alice_license.jpg', 'Alice Staff', '$2a$10$dummyhash', 'alice_id.jpg', '0900000005', 'STAFF', 'ACTIVE', 2),
+(6, '654 Staff Ln', '2024-01-06 09:00:00.000000', '1989-11-30', 'charlie.staff@evr.com', 'charlie_license.jpg', 'Charlie Staff', '$2a$10$dummyhash', 'charlie_id.jpg', '0900000006', 'STAFF', 'ACTIVE', 3),
+(7, '987 Staff Dr', '2024-01-07 09:00:00.000000', '1993-12-05', 'diana.staff@evr.com', 'diana_license.jpg', 'Diana Staff', '$2a$10$dummyhash', 'diana_id.jpg', '0900000007', 'STAFF', 'ACTIVE', 4),
+(8, '111 Customer St', '2024-01-10 10:00:00.000000', '1995-02-14', 'alice.customer@email.com', 'alice_cust_license.jpg', 'Alice Customer', '$2a$10$dummyhash', 'alice_cust_id.jpg', '0911111111', 'CUSTOMER', 'ACTIVE', NULL),
+(9, '222 Customer Ave', '2024-01-11 10:00:00.000000', '1996-04-20', 'bob.customer@email.com', 'bob_cust_license.jpg', 'Bob Customer', '$2a$10$dummyhash', 'bob_cust_id.jpg', '0922222222', 'CUSTOMER', 'ACTIVE', NULL),
+(10, '333 Customer Rd', '2024-01-12 10:00:00.000000', '1997-06-15', 'carol.customer@email.com', 'carol_cust_license.jpg', 'Carol Customer', '$2a$10$dummyhash', 'carol_cust_id.jpg', '0933333333', 'CUSTOMER', 'ACTIVE', NULL),
+(11, '444 Customer Blvd', '2024-01-13 10:00:00.000000', '1994-08-22', 'david.customer@email.com', 'david_cust_license.jpg', 'David Customer', '$2a$10$dummyhash', 'david_cust_id.jpg', '0944444444', 'CUSTOMER', 'ACTIVE', NULL),
+(12, '555 Customer Ln', '2024-01-14 10:00:00.000000', '1998-10-18', 'eve.customer@email.com', 'eve_cust_license.jpg', 'Eve Customer', '$2a$10$dummyhash', 'eve_cust_id.jpg', '0955555555', 'CUSTOMER', 'ACTIVE', NULL),
+(13, '666 Customer Dr', '2024-01-15 10:00:00.000000', '1993-03-25', 'frank.customer@email.com', 'frank_cust_license.jpg', 'Frank Customer', '$2a$10$dummyhash', 'frank_cust_id.jpg', '0966666666', 'CUSTOMER', 'SUSPENDED', NULL);
+
 INSERT INTO Station (name, address, contactNumber, totalSlots, AvailableSlots, operatingHours, latitude, longitude)
 VALUES
   ('Central Station', '123 Main St', '0123456789', 50, 40, '08:00-22:00', 10.775, 106.700),
