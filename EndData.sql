@@ -1,4 +1,4 @@
-﻿-- 1. Insert dữ liệu bảng Station (không thay đổi)
+﻿	-- 1. Insert dữ liệu bảng Station (không thay đổi)
 INSERT INTO Station (name, address, contactNumber, totalSlots, AvailableSlots, operatingHours, latitude, longitude)
 VALUES
   ('Chi Nhánh Quận 1', '123 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP.HCM', '0281234567', 50, 40, '07:00-22:00', 10.7756, 106.7019),
@@ -21,19 +21,19 @@ SET IDENTITY_INSERT Users ON;
 
 INSERT INTO Users (UserID, Address, CreatedAt, DateOfBirth, Email, LicenseImage, Name, PasswordHash, PersonalIdImage, Phone, Role, Status, StationID)
 VALUES
-(1, '123 Nguyễn Huệ, Quận 1, TP.HCM', '2024-01-01 08:00:00', '1980-01-15', 'admin@evr.com', NULL, 'Nguyễn Văn An', '$2a$10$dummyhash', 'admin_id.jpg', '0901234567', 'Admin', 'Active', NULL),
-(2, '456 Lê Lợi, Quận 1, TP.HCM', '2024-01-02 09:00:00', '1990-03-20', 'tranhung.staff@evr.com', 'tranhung_license.jpg', 'Trần Văn Hùng', '$2a$10$dummyhash', 'tranhung_id.jpg', '0912345678', 'Staff', 'Active', 1),
-(3, '789 Hai Bà Trưng, Quận 3, TP.HCM', '2024-01-03 09:00:00', '1992-05-15', 'lethimai.staff@evr.com', 'lethimai_license.jpg', 'Lê Thị Mai', '$2a$10$dummyhash', 'lethimai_id.jpg', '0923456789', 'Staff', 'Active', 1),
-(4, '321 Trần Hưng Đạo, Quận 5, TP.HCM', '2024-01-04 09:00:00', '1988-07-10', 'phamhoang.staff@evr.com', 'phamhoang_license.jpg', 'Phạm Văn Hoàng', '$2a$10$dummyhash', 'phamhoang_id.jpg', '0934567890', 'Staff', 'Active', 2),
-(5, '654 Võ Văn Tần, Quận 3, TP.HCM', '2024-01-05 09:00:00', '1991-09-25', 'vothilan.staff@evr.com', 'vothilan_license.jpg', 'Võ Thị Lan', '$2a$10$dummyhash', 'vothilan_id.jpg', '0945678901', 'Staff', 'Active', 2),
-(6, '147 Pasteur, Quận 1, TP.HCM', '2024-01-06 09:00:00', '1989-11-30', 'hoangminh.staff@evr.com', 'hoangminh_license.jpg', 'Hoàng Văn Minh', '$2a$10$dummyhash', 'hoangminh_id.jpg', '0956789012', 'Staff', 'Active', 3),
-(7, '258 Điện Biên Phủ, Quận Bình Thạnh, TP.HCM', '2024-01-07 09:00:00', '1993-12-05', 'dothiphuong.staff@evr.com', 'dothiphuong_license.jpg', 'Đỗ Thị Phương', '$2a$10$dummyhash', 'dothiphuong_id.jpg', '0967890123', 'Staff', 'Active', 4),
-(8, '369 Lý Thường Kiệt, Quận 10, TP.HCM', '2024-01-10 10:00:00', '1995-02-14', 'nguyenthuy@email.com', 'nguyenthuy_license.jpg', 'Nguyễn Thị Thùy', '$2a$10$dummyhash', 'nguyenthuy_id.jpg', '0978901234', 'Customer', 'Active', NULL),
-(9, '741 Nguyễn Thị Minh Khai, Quận 3, TP.HCM', '2024-01-11 10:00:00', '1996-04-20', 'trankien@email.com', 'trankien_license.jpg', 'Trần Văn Kiên', '$2a$10$dummyhash', 'trankien_id.jpg', '0989012345', 'Customer', 'Active', NULL),
-(10, '852 Cách Mạng Tháng 8, Quận Tân Bình, TP.HCM', '2024-01-12 10:00:00', '1997-06-15', 'phamhoa@email.com', 'phamhoa_license.jpg', 'Phạm Thị Hoa', '$2a$10$dummyhash', 'phamhoa_id.jpg', '0990123456', 'Customer', 'Active', NULL),
-(11, '963 Hoàng Văn Thụ, Quận Phú Nhuận, TP.HCM', '2024-01-13 10:00:00', '1994-08-22', 'leductuan@email.com', 'leductuan_license.jpg', 'Lê Đức Tuấn', '$2a$10$dummyhash', 'leductuan_id.jpg', '0901112233', 'Customer', 'Active', NULL),
-(12, '159 Phan Đăng Lưu, Quận Bình Thạnh, TP.HCM', '2024-01-14 10:00:00', '1998-10-18', 'vuthilinh@email.com', 'vuthilinh_license.jpg', 'Vũ Thị Linh', '$2a$10$dummyhash', 'vuthilinh_id.jpg', '0912223344', 'Customer', 'Active', NULL),
-(13, '357 Võ Thị Sáu, Quận 3, TP.HCM', '2024-01-15 10:00:00', '1993-03-25', 'buivannam@email.com', 'buivannam_license.jpg', 'Bùi Văn Nam', '$2a$10$dummyhash', 'buivannam_id.jpg', '0923334455', 'Customer', 'Suspended', NULL);
+(1, '123 Nguyễn Huệ, Quận 1, TP.HCM', '2024-01-01 08:00:00', '1980-01-15', 'admin@evr.com', NULL, 'Nguyễn Văn An', '$2a$12$yJ8LYmndRx7gLsEJk1epj.ssi/z5aANNF6NMzsXU5YEs181lxXMqy', 'admin_id.jpg', '0901234567', 'Admin', 'Active', NULL),
+(2, '456 Lê Lợi, Quận 1, TP.HCM', '2024-01-02 09:00:00', '1990-03-20', 'tranhung.staff@evr.com', 'tranhung_license.jpg', 'Trần Văn Hùng', '$2a$12$yJ8LYmndRx7gLsEJk1epj.ssi/z5aANNF6NMzsXU5YEs181lxXMqy', 'tranhung_id.jpg', '0912345678', 'Staff', 'Active', 1),
+(3, '789 Hai Bà Trưng, Quận 3, TP.HCM', '2024-01-03 09:00:00', '1992-05-15', 'lethimai.staff@evr.com', 'lethimai_license.jpg', 'Lê Thị Mai', '$2a$12$yJ8LYmndRx7gLsEJk1epj.ssi/z5aANNF6NMzsXU5YEs181lxXMqy', 'lethimai_id.jpg', '0923456789', 'Staff', 'Active', 1),
+(4, '321 Trần Hưng Đạo, Quận 5, TP.HCM', '2024-01-04 09:00:00', '1988-07-10', 'phamhoang.staff@evr.com', 'phamhoang_license.jpg', 'Phạm Văn Hoàng', '$2a$12$yJ8LYmndRx7gLsEJk1epj.ssi/z5aANNF6NMzsXU5YEs181lxXMqy', 'phamhoang_id.jpg', '0934567890', 'Staff', 'Active', 2),
+(5, '654 Võ Văn Tần, Quận 3, TP.HCM', '2024-01-05 09:00:00', '1991-09-25', 'vothilan.staff@evr.com', 'vothilan_license.jpg', 'Võ Thị Lan', '$2a$12$yJ8LYmndRx7gLsEJk1epj.ssi/z5aANNF6NMzsXU5YEs181lxXMqy', 'vothilan_id.jpg', '0945678901', 'Staff', 'Active', 2),
+(6, '147 Pasteur, Quận 1, TP.HCM', '2024-01-06 09:00:00', '1989-11-30', 'hoangminh.staff@evr.com', 'hoangminh_license.jpg', 'Hoàng Văn Minh', '$2a$12$yJ8LYmndRx7gLsEJk1epj.ssi/z5aANNF6NMzsXU5YEs181lxXMqy', 'hoangminh_id.jpg', '0956789012', 'Staff', 'Active', 3),
+(7, '258 Điện Biên Phủ, Quận Bình Thạnh, TP.HCM', '2024-01-07 09:00:00', '1993-12-05', 'dothiphuong.staff@evr.com', 'dothiphuong_license.jpg', 'Đỗ Thị Phương', '$2a$12$yJ8LYmndRx7gLsEJk1epj.ssi/z5aANNF6NMzsXU5YEs181lxXMqy', 'dothiphuong_id.jpg', '0967890123', 'Staff', 'Active', 4),
+(8, '369 Lý Thường Kiệt, Quận 10, TP.HCM', '2024-01-10 10:00:00', '1995-02-14', 'nguyenthuy@email.com', 'nguyenthuy_license.jpg', 'Nguyễn Thị Thùy', '$2a$12$yJ8LYmndRx7gLsEJk1epj.ssi/z5aANNF6NMzsXU5YEs181lxXMqy', 'nguyenthuy_id.jpg', '0978901234', 'Customer', 'Active', NULL),
+(9, '741 Nguyễn Thị Minh Khai, Quận 3, TP.HCM', '2024-01-11 10:00:00', '1996-04-20', 'trankien@email.com', 'trankien_license.jpg', 'Trần Văn Kiên', '$2a$12$yJ8LYmndRx7gLsEJk1epj.ssi/z5aANNF6NMzsXU5YEs181lxXMqy', 'trankien_id.jpg', '0989012345', 'Customer', 'Active', NULL),
+(10, '852 Cách Mạng Tháng 8, Quận Tân Bình, TP.HCM', '2024-01-12 10:00:00', '1997-06-15', 'phamhoa@email.com', 'phamhoa_license.jpg', 'Phạm Thị Hoa', '$2a$12$yJ8LYmndRx7gLsEJk1epj.ssi/z5aANNF6NMzsXU5YEs181lxXMqy', 'phamhoa_id.jpg', '0990123456', 'Customer', 'Active', NULL),
+(11, '963 Hoàng Văn Thụ, Quận Phú Nhuận, TP.HCM', '2024-01-13 10:00:00', '1994-08-22', 'leductuan@email.com', 'leductuan_license.jpg', 'Lê Đức Tuấn', '$2a$12$yJ8LYmndRx7gLsEJk1epj.ssi/z5aANNF6NMzsXU5YEs181lxXMqy', 'leductuan_id.jpg', '0901112233', 'Customer', 'Active', NULL),
+(12, '159 Phan Đăng Lưu, Quận Bình Thạnh, TP.HCM', '2024-01-14 10:00:00', '1998-10-18', 'vuthilinh@email.com', 'vuthilinh_license.jpg', 'Vũ Thị Linh', '$2a$12$yJ8LYmndRx7gLsEJk1epj.ssi/z5aANNF6NMzsXU5YEs181lxXMqy', 'vuthilinh_id.jpg', '0912223344', 'Customer', 'Active', NULL),
+(13, '357 Võ Thị Sáu, Quận 3, TP.HCM', '2024-01-15 10:00:00', '1993-03-25', 'buivannam@email.com', 'buivannam_license.jpg', 'Bùi Văn Nam', '$2a$12$yJ8LYmndRx7gLsEJk1epj.ssi/z5aANNF6NMzsXU5YEs181lxXMqy', 'buivannam_id.jpg', '0923334455', 'Customer', 'Suspended', NULL);
 
 SET IDENTITY_INSERT Users OFF;
 
